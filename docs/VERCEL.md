@@ -1,32 +1,50 @@
 # Деплой AImanager на Vercel
 
-## Что на Vercel, что не на Vercel
+У нас два артефакта, и у них разные предикаты:
 
-| Часть | Где живёт | Почему |
+| Артефакт | Где живёт | Preset / Root |
 |---|---|---|
-| Лендинг waitlist (`site/`) | **Vercel** (статика) | Один HTML+CSS, мгновенные деплои, бесплатный SSL |
-| Веб-приложение (FastAPI + Jinja + worker) | **VPS** (`docker-compose.yml`) | Нужен Postgres + постоянный worker + Fernet-ключ; serverless «для демо» даст несохраняющуюся БД и вечные таймауты на WB sync |
-| `AImanager` API | тот же VPS | там же живёт очередь публикации |
+| **Лендинг waitlist** — статика | Vercel (проект «landing») | preset: **Other**, Root Directory: **site** |
+| **Веб-приложение** (FastAPI + Jinja + worker) | VPS (`docker-compose.yml`) — так задумано для прода. Но «посмотреть как выглядит» можно и на Vercel (проект «app») | preset: **FastAPI**, Root Directory: **./** |
 
-## Шаги (1–2 минуты, один раз)
+Как в UI Vercel (то, что вы видели на скриншоте): на странице импорта
+«Importing from GitHub» замените **Application Preset** с «FastAPI» на «Other»
+и поставьте **Root Directory → site** — так статика задеплоится без сборки.
 
-1. Открыть <https://vercel.com/new> и войти через GitHub (аккаунт `n0b1esse`).
-2. **Import Git Repository** → выбрать `n0b1esse/AImanager`.
-3. На экране настроек проекта:
-   - **Root Directory**: `site` (кнопка «Edit» → вписать `site`)
-   - **Framework Preset**: Other (это статика, без сборки и без Install Command)
-   - **Build Command**: пусто · **Output Directory**: `.`
-4. Deploy → через ~20 секунд получите URL вида `aimanager-xxxx.vercel.app`.
+## Сценарий 1 — лендинг (рекомендую, 1 минута)
 
-## После деплоя
+1. <https://vercel.com/new> → импортируйте `n0b1esse/AImanager`.
+2. Application Preset: **Other**.
+3. **Root Directory**: `site` (Edit → впишите `site`).
+4. Build Command / Install Command / Output Directory: оставьте пустыми (или `.`).
+5. Deploy → получите URL.
 
-- [ ] Заменить `waitlist@example.com` в `site/index.html` (и в `mailto:` в скрипте внизу) на ваш реальный email → commit → Vercel пересоберёт сам.
-- [ ] Заменить в футере и в `<meta description>` брендовые тексты при необходимости.
-- [ ] В настройках проекта Vercel добавить свой домен (например `aimanager.kg`) → там же выдадут DNS-записи для регистратора. После этого — сразу в приложение по ссылке вида `https://<домен>/login`.
+## Сценарий 2 — приложение (демо, чтобы увидеть UI)
 
-## Когда понадобится задеплоить и приложение
+FastAPI на Vercel — это Python serverless. Для демо нужно три вещи:
 
-Если захотите полный продукт на Vercel — это возможно (FastAPI как Python serverless), но:
-нужен managed Postgres (Neon / Vercel Postgres), обязателен `requirements.txt`, отключается воркер
-(генерация только по кнопке, без авто-генерации в фоне), 10-секундный лимит функции на запрос (WB sync
-может не успеть). Поэтому для пилота приложение держим на VPS, на Vercel — лендинг.
+1. **Managed Postgres** — заводите бесплатную базу на [Neon](https://neon.tech) (2 минуты) или Vercel Postgres. Получаете `DATABASE_URL` вида `postgresql+asyncpg://user:pass@host/db?ssl=require`.
+2. **Env-переменные в проекте Vercel** (Settings → Environment Variables):
+   ```
+   DATABASE_URL=postgresql+asyncpg://…
+   APP_ENV=development            # dev-режим: magic-link показывается на странице входа, без SMTP
+   FERNET_KEY=<Fernet.generate_key()>
+   SESSION_SECRET=<random hex 32+ байт>
+   PYTHONIOENCODING=utf-8
+   ```
+   **Не задавайте `OWNER_EMAILS`** — иначе любой зашедший увидит админку. Admin-панель на демо просто не нужна.
+3. На странице импорта: preset **FastAPI**, Root Directory **./** (по умолчанию), Deploy.
+   Vercel увидит `pyproject.toml` (`[tool.vercel] entrypoint = "wb_web.main:app"`) и `requirements.txt`, поставит зависимости.
+
+Что будет работать на демо: вход (dev magic-link на странице), магазины, очередь, настройки ИИ, UI генерации/апрува/публикации (WB живой — если впишете свой токен, кнопка «Опубликовать» реально публикует), `/app/stats`, `/app/billing`, админка — отключена. Чего не будет: авто-генерации в фоне (worker только на VPS) и persistence на холодный старт, если функция уснёт надолго (данные в Neon сохраняются, просто первый запрос дольше).
+
+**Не является продом:** на публичном демо ходит любой желающий; вчерашние данные демо не приватны для других посетителей — не загружайте настоящие токены. Для прода — VPS и свой домен.
+
+## Проверка локально перед деплоем
+
+```powershell
+pip install -e ".[dev]"
+python -m pytest   # 114 passed
+```
+
+То же приложение поднимается локально: `uvicorn wb_web.main:app --reload` → <http://127.0.0.1:8000>.
