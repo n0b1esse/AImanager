@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Автоматические ответы на отзывы Ozon через официальный Seller API: ваш ИИ отвечает быстро и по существу. Нужен Client-Id + Api-Key и подписка «Управление отзывами».">
+<title>Ответы на отзывы Ozon автоматически — AImanager</title>
+<link rel="canonical" href="https://aimanager.kg/ozon">
+<meta property="og:title" content="Ответы на отзывы Ozon автоматически — AImanager">
+<meta property="og:description" content="ИИ отвечает на отзывы Ozon вашим «голосом». Официальный Seller API, ваш LLM-ключ, 7 дней триала.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23a73afd'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>A</text></svg>">
+<link rel="stylesheet" href="/style.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"AImanager — ответы на отзывы Ozon","applicationCategory":"BusinessApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"KGS","description":"7 дней триала"},"description":"Автоматические ответы на отзывы Ozon через официальный Seller API."}
+</script>
+</head>
+<body>
+<header class="nav"><div class="wrap nav-inner">
+  <a class="logo" href="/">AImanager</a>
+  <nav class="nav-links"><a href="/wildberries">Wildberries</a><a href="/ozon">Ozon</a><a href="/pricing">Тарифы</a><a href="/faq">FAQ</a></nav>
+  <a class="btn btn-sm btn-primary" href="#waitlist">Ранний доступ</a>
+</div></header>
+
+<section class="page-hero"><div class="wrap">
+  <div class="breadcrumb"><a href="/">AImanager</a> → Для Ozon</div>
+  <h1>Ответы на отзывы <span class="grad">Ozon</span> — автоматически</h1>
+  <p class="lead">AImanager подключается к Ozon Seller API (Client-Id + Api-Key), забирает новые отзывы и отвечает на них вашим ИИ в стилистике вашей ниши — после вашего апрува или автономно. Один сервис — Wildberries и Ozon.</p>
+  <div class="hero-ctas"><a class="btn btn-primary" href="#waitlist">Получить ранний доступ на Ozon</a><a class="btn btn-ghost" href="/pricing">Тарифы →</a></div>
+  <p class="micro">Официальный Seller API · нужна подписка Ozon «Управление отзывами» (или Premium Pro) · публикация только с вашего апрува</p>
+</div></section>
+
+<section class="band"><div class="wrap">
+  <h2>Честно о требованиях Ozon</h2>
+  <p>Ozon открывает API отзывов <b>только продавцам с подпиской «Управление отзывами» или Premium Pro</b>. Без неё методы <code>/v2/review/list</code> и <code>/v1/review/comment/create</code> вернут отказ. Перед запуском проверьте в кабинете Ozon: <b>Продавцу → Подписка → «Управление отзывами»</b>.</p>
+  <ul class="checklist" style="margin-top:20px">
+    <li><svg viewBox="0 0 24 24" class="ic"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Client-Id и Api-Key — используем только для официального Seller API Ozon</li>
+    <li><svg viewBox="0 0 24 24" class="ic"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ответ публикуется как комментарий продавца к отзыву (официальный метод)</li>
+    <li><svg viewBox="0 0 24 24" class="ic"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Отзыв помечается <code>Processed</code> — чтобы не отвечать дважды</li>
+    <li><svg viewBox="0 0 24 24" class="ic"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Неоднозначный сбой → перепроверка комментариев, дублей не будет</li>
+  </ul>
+</div></section>
+
+<section class="section"><div class="wrap">
+  <h2>Как подключить Ozon</h2>
+  <ol class="checklist" style="counter-reset:none">
+    <li><b>1.</b> В кабинете Ozon: <b>Аккаунт → Seller API → API-ключи</b> — создайте ключ с правом на «Управление отзывами»</li>
+    <li><b>2.</b> В AImanager: <b>Магазины → Добавить → Ozon</b> — вставьте Client-Id и Api-Key (хранятся зашифрованно)</li>
+    <li><b>3.</b> Проверяем подключение, забираем новые отзывы — и вперёд в очередь</li>
+  </ol>
+  <div class="cta-band"><h2>Wildberries и Ozon — в одном кабинете</h2><p class="muted">Один сервис, одна очередь, один ИИ — два маркетплейса.</p><a class="btn btn-primary" href="#waitlist">Жду доступ для Ozon</a></div>
+</div></section>
+
+<div id="waitlist" class="wrap narrow center waitlist" style="padding-bottom:56px">
+  <h2>Ранний доступ на Ozon</h2>
+  <form id="waitlist-form" class="waitlist-form">
+    <input type="email" id="wl-email" placeholder="you@example.com" required autocomplete="email">
+    <select id="wl-shops" aria-label="Магазинов"><option value="1">1 магазин</option><option value="3">2–3 магазина</option><option value="10">4+ магазинов</option></select>
+    <select id="wl-niche" aria-label="Ниша"><option value="">Другая ниша</option><option>Одежда и обувь</option><option>Красота и уход</option><option>Электроника</option><option>Продукты</option><option>Детские товары</option><option>Дом и сад</option></select>
+    <button class="btn btn-primary" type="submit">Получить приглашение</button>
+  </form>
+  <p class="micro" id="wl-note">Кнопка откроет письмо с заявкой.</p>
+</div>
+<script>
+document.getElementById('waitlist-form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var email = document.getElementById('wl-email').value.trim();
+  var shops = document.getElementById('wl-shops').value;
+  var niche = document.getElementById('wl-niche').value || 'другая';
+  window.location.href = 'mailto:waitlist@example.com?subject=' + encodeURIComponent('Ранний доступ AImanager — Ozon') + '&body=' + encodeURIComponent('Email: ' + email + '\nМагазинов: ' + shops + '\nНиша: ' + niche);
+  document.getElementById('wl-note').textContent = 'Если письмо не открылось — напишите: waitlist@example.com';
+});
+</script>
+<footer class="footer"><div class="wrap footer-inner"><div><a class="logo small" href="/">AImanager</a><p class="muted small"><a href="/wildberries">Wildberries</a> · <a href="/ozon">Ozon</a> · <a href="/niche">Ниши</a> · <a href="/pricing">Тарифы</a> · <a href="/faq">FAQ</a> · <a href="/blog/avtootvety-wildberries">Блог</a></p></div><div class="muted small"><p>waitlist@example.com</p></div></div></footer>
+</body>
+</html>

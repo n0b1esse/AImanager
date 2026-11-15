@@ -142,3 +142,39 @@ h2 { font-size: clamp(26px, 3vw, 36px); letter-spacing: -0.3px; margin: 0 0 14px
   .nav-links { display: none; }
   .footer-inner { flex-direction: column; }
 }
+
+/* ===== multi-page additions ===== */
+.page-hero { padding: 64px 0 34px; background: radial-gradient(ellipse at 30% 0%, rgba(167,58,253,.22), transparent 60%); }
+.breadcrumb { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+.breadcrumb a { color: #d8a6ff; }
+.page-hero h1 { font-size: clamp(30px, 4vw, 44px); }
+.page-hero .lead { font-size: 17px; }
+
+.band { padding: 48px 0; border-top: 1px solid var(--border); background: #171a20; }
+.checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.checklist li { display: flex; gap: 10px; align-items: flex-start; color: #d7dde6; font-size: 16px; }
+.checklist .ic { width: 19px; height: 19px; color: var(--success); flex: 0 0 auto; margin-top: 2px; }
+
+.cta-band { text-align: center; background: linear-gradient(120deg, rgba(203,17,245,.15), rgba(167,58,253,.1)); border: 1px solid rgba(167,58,253,.35); border-radius: var(--radius); padding: 34px 28px; margin: 40px 0; }
+.cta-band h2 { margin-bottom: 8px; font-size: 24px; }
+
+.article { max-width: 760px; margin: 0 auto; }
+.article h2 { font-size: 26px; margin: 34px 0 12px; padding-top: 18px; border-top: 1px solid var(--border); }
+.article h2:first-of-type { border-top: 0; }
+.article h3 { font-size: 19px; margin: 22px 0 8px; }
+.article p, .article li { color: #c6ccd6; font-size: 16px; line-height: 1.7; }
+.article ul { padding-left: 20px; }
+.article strong { color: var(--text); }
+.article code { background: var(--panel-2); padding: 1px 6px; border-radius: 6px; font-size: 14px; }
+
+.kw-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 18px 0; }
+.kw-table th, .kw-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.kw-table th { color: var(--muted); text-transform: uppercase; font-size: 11px; letter-spacing: .5px; }
+
+.niche-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.niche-list a { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px; display: block; }
+.niche-list a:hover { border-color: var(--accent-2); text-decoration: none; }
+.niche-list b { color: var(--text); }
+.niche-list span { color: var(--muted); font-size: 13px; }
+
+@media (max-width: 760px) { .niche-list { grid-template-columns: 1fr; } }

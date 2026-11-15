@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Как автоматизировать ответы на отзывы Wildberries без риска для карточки: официальный API, свой ИИ, границы утверждений, автопилот и апрув.">
+<link rel="canonical" href="https://aimanager.kg/blog/avtootvety-wildberries">
+<title>Как автоматизировать ответы на отзывы Wildberries — AImanager</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23a73afd'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>A</text></svg>">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="nav"><div class="wrap nav-inner"><a class="logo" href="/">AImanager</a><nav class="nav-links"><a href="/wildberries">Wildberries</a><a href="/ozon">Ozon</a><a href="/pricing">Тарифы</a><a href="/faq">FAQ</a></nav><a class="btn btn-sm btn-primary" href="/#waitlist">Ранний доступ</a></div></header>
+
+<section class="page-hero"><div class="wrap">
+  <div class="breadcrumb"><a href="/">AImanager</a> → <a href="/blog/avtootvety-wildberries">Блог</a></div>
+  <h1>Как автоматизировать ответы на отзывы Wildberries (и не получить бан за шаблоны)</h1>
+  <p class="muted">7 минут чтения · Команда AImanager</p>
+</div></section>
+
+<section class="section" style="padding-top:10px"><div class="wrap article">
+  <p>У продавца WB с 3–5 кабинетами ежедневно набегает 30–80 новых отзывов. Менеджер физически не успевает отвечать по-человечески — и карточка теряет конверсию и поисковую выдачу: WB прямо ранжирует по показателю «качество сервиса», и отсутствие ответов туда входит.</p>
+
+  <h2>Почему «вставить свои ответы списком» — плохая идея</h2>
+  <ul><li>Покупатели распознают одинаковые формулировки мгновенно — доверие падает.</li><li>Шаблон не отвечает на конкретную проблему — «спасибо за отзыв» под жалобой выглядит издевательством.</li><li>Запрещённые ответы (компенсации, «гарантированно подойдёт») получают негативные реакции и могут уйти в модерацию WB как некачественные.</li></ul>
+
+  <h2>Как это работает у нас</h2>
+  <ol><li>Сервис забирает новые отзывы через официальный API WB.</li><li>Ваш ИИ (OpenAI / совместимый endpoint / локальная Ollama) пишет ответ по жёсткому каркасу: фактура ниши → контекст отзыва → границы утверждений.</li><li>Ответ приходит вам в очередь — вы одобряете или правите. Полный автопилот включаете отдельно на каждый кабинет.</li><li>Публикуем через официальный метод ответа; после неоднозначного сбоя перепроверяем статус — дублей не будет.</li></ol>
+
+  <h2>Безопасность публикации</h2>
+  <p>Ответа с обещаниями возврата/компенсации, названия обмана или ИИ, пустой текст или текст длиннее 5000 символов наш quality-gate не пропустит. «Брак», «отравление», «суд» — всегда живой человек.</p>
+
+  <h2>Сколько времени экономит</h2>
+  <p>При 50 отзывах в день и 3–4 минутах на ответ — 2,5–3 часа в день на одного менеджера. На практике: 70–80% ответов можно одобрять без правки.</p>
+
+  <div class="cta-band"><h2>Попробуйте на своих отзывах</h2><p class="muted">7 дней триала. Свой ИИ-ключ. Отписка в любой момент.</p><a class="btn btn-primary" href="/wildberries">Подключить кабинет WB →</a></div>
+</div></section>
+<footer class="footer"><div class="wrap footer-inner"><div class="muted small"><a href="/wildberries">Wildberries</a> · <a href="/ozon">Ozon</a> · <a href="/niche">Ниши</a> · <a href="/pricing">Тарифы</a> · <a href="/blog/ozon-otzyvy-api">API Ozon для отзывов →</a></div><div class="muted small"><p>waitlist@example.com</p></div></div></footer>
+</body>
+</html>

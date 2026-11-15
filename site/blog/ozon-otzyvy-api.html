@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Ozon Seller API для отзывов: Client-Id и Api-Key, /v2/review/list, /v1/review/comment/create, подписка «Управление отзывами». Что умеет и чего стоит избегать.">
+<link rel="canonical" href="https://aimanager.kg/blog/ozon-otzyvy-api">
+<title>Ozon Seller API для отзывов: что умеет — AImanager</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23a73afd'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>A</text></svg>">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="nav"><div class="wrap nav-inner"><a class="logo" href="/">AImanager</a><nav class="nav-links"><a href="/wildberries">Wildberries</a><a href="/ozon">Ozon</a><a href="/pricing">Тарифы</a><a href="/faq">FAQ</a></nav><a class="btn btn-sm btn-primary" href="/#waitlist">Ранний доступ</a></div></header>
+
+<section class="page-hero"><div class="wrap">
+  <div class="breadcrumb"><a href="/">AImanager</a> → <a href="/blog/avtootvety-wildberries">Блог</a> → Ozon API</div>
+  <h1>Ozon Seller API для отзывов: что умеет и как подключить</h1>
+  <p class="muted">8 минут · Команда AImanager</p>
+</div></section>
+
+<section class="section" style="padding-top:10px"><div class="wrap article">
+  <h2>Что важно знать в начале</h2>
+  <p>Ozon открывает API отзывов <strong>только продавцам с подпиской «Управление отзывами» или Premium Pro</strong>. Без неё оба нужных метода вернут отказ. Проверяйте в кабинете: <strong>Продавцу → Подписка</strong>.</p>
+
+  <h2>Аутентификация</h2>
+  <p>Два заголовка к каждому запросу: <code>Client-Id</code> (идентификатор кабинета) и <code>Api-Key</code> (ключ на странице «Аккаунт → Seller API → API-ключи»). Точно так же, как в остальном Ozon Seller API.</p>
+
+  <h2>Основные методы</h2>
+  <table class="kw-table">
+    <thead><tr><th>Метод</th><th>Зачем</th></tr></thead>
+    <tbody>
+      <tr><td><code>POST /v2/review/list</code></td><td>Список отзывов (фильтр <code>status=NEW</code> — неотвеченные; пагинация через <code>last_id</code>, <code>limit 20–100</code>)</td></tr>
+      <tr><td><code>POST /v1/review/comment/list</code></td><td>Комментарии к отзыву — наш способ проверить «уже отвечал я или нет»</td></tr>
+      <tr><td><code>POST /v1/review/comment/create</code></td><td>Ответ продавца; <code>mark_review_as_processed: true</code> помечает отзыв обработанным</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Типичные поля отзыва</h2>
+  <p><code>id</code>, <code>sku</code>, <code>text</code>, <code>rating</code> (1–5), <code>status</code>, <code>published_at</code>, <code>comments_amount</code>. То, что нам нужно для генерации ответа: текст, оценка, артикул.</p>
+
+  <h2>Чего избегать при интеграции</h2>
+  <ul><li>Наивный retry при сетевом сбое: отправили ответ, потеряли подтверждение — и отправили второй. Всегда сначала <code>comment/list</code> и проверка наличия вашего комментария.</li><li>Отвечать на отзывы со статусом не-NEW или с <code>comments_amount &gt; 0</code> от владельца.</li><li>Хранить ключ в открытом виде: шифруйте тем же способом, что и токены WB.</li></ul>
+
+  <h2>Что делает AImanager</h2>
+  <p>Ровно этими методами мы забираем новые отзывы, пишем ответы вашим ИИ и публикуем их после вашего апрува. Детали — <a href="/ozon">на странице для Ozon</a>. Wildberries и Ozon — в одном кабинете.</p>
+
+  <div class="cta-band"><h2>Подключите Ozon-кабинет</h2><p class="muted">7 дней триала.</p><a class="btn btn-primary" href="/ozon">AImanager для Ozon →</a></div>
+</div></section>
+<footer class="footer"><div class="wrap footer-inner"><div class="muted small"><a href="/ozon">Ozon</a> · <a href="/wildberries">Wildberries</a> · <a href="/pricing">Тарифы</a> · <a href="/blog/avtootvety-wildberries">← Как автоматизировать ответы</a></div><div class="muted small"><p>waitlist@example.com</p></div></div></footer>
+</body>
+</html>
