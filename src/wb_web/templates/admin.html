@@ -21,7 +21,7 @@
 
 <div class="panel">
   <h3>Пользователи</h3>
-  <table class="table">
+  <div class="table-scroll"><table class="table">
     <thead><tr><th>ID</th><th>Email</th><th>План</th><th>Статус</th><th>Период до</th><th>Действия{% if admin_role != 'owner' %} <span class="badge">read-only</span>{% endif %}</th></tr></thead>
     <tbody>
       {% for row in rows %}
@@ -51,12 +51,12 @@
       </tr>
       {% endfor %}
     </tbody>
-  </table>
+  </table></div>
 </div>
 
 <div class="panel">
   <h3>Последние действия</h3>
-  <table class="table">
+  <div class="table-scroll"><table class="table">
     <thead><tr><th>ID</th><th>Кто</th><th>Действие</th><th>Цель</th><th>Когда</th></tr></thead>
     <tbody>
       {% for e in audit_entries %}
@@ -64,6 +64,6 @@
       {% endfor %}
       {% if not audit_entries %}<tr><td colspan="5" class="muted">пока пусто</td></tr>{% endif %}
     </tbody>
-  </table>
+  </table></div>
 </div>
 {% endblock %}

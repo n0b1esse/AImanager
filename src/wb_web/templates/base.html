@@ -11,7 +11,7 @@
 {% if user %}
 <header class="topbar">
   <a class="logo" href="/app">AImanager</a>
-  <nav>
+  <nav class="topbar-nav">
     <a href="/app">Обзор</a>
     <a href="/app/reviews">Очередь</a>
     <a href="/app/shops">Магазины</a>
@@ -21,10 +21,34 @@
   </nav>
   <div class="spacer"></div>
   <span class="who">{{ user.email }}</span>
-  <form method="post" action="/auth/logout" style="display:inline">
+  <form method="post" action="/auth/logout" class="topbar-logout" style="display:inline">
     <button class="btn small ghost" type="submit">Выход</button>
   </form>
+  <button class="hamburger" id="hamburger" aria-label="Меню" aria-expanded="false" aria-controls="navpanel"><span></span><span></span><span></span></button>
+  <div class="nav-panel" id="navpanel" hidden>
+    <a href="/app">Обзор</a>
+    <a href="/app/reviews">Очередь отзывов</a>
+    <a href="/app/shops">Магазины</a>
+    <a href="/app/billing">Подписка</a>
+    <a href="/app/stats">Статистика</a>
+    {% if is_admin %}<a href="/app/admin">Админка</a>{% endif %}
+    <form method="post" action="/auth/logout">
+      <button class="btn ghost panel-logout" type="submit">Выйти ({{ user.email }})</button>
+    </form>
+  </div>
 </header>
+<script>
+(function(){
+  var btn=document.getElementById('hamburger'), panel=document.getElementById('navpanel');
+  if(!btn||!panel) return;
+  function close(){panel.hidden=true;btn.setAttribute('aria-expanded','false');}
+  function toggle(){panel.hidden=!panel.hidden;btn.setAttribute('aria-expanded',String(!panel.hidden));}
+  btn.addEventListener('click',function(e){e.stopPropagation();toggle();});
+  document.addEventListener('click',function(e){if(!panel.hidden && !panel.contains(e.target))close();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+  panel.addEventListener('click',function(e){if(e.target.closest('a'))close();});
+})();
+</script>
 {% endif %}
 
 <main class="container">

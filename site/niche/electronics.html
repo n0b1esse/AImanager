@@ -9,7 +9,16 @@
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<header class="nav"><div class="wrap nav-inner"><a class="logo" href="/">AImanager</a><nav class="nav-links"><a href="/wildberries">Wildberries</a><a href="/ozon">Ozon</a><a href="/pricing">Тарифы</a><a href="/faq">FAQ</a></nav><a class="btn btn-sm btn-primary" href="/#waitlist">Ранний доступ</a></div></header>
+<header class="nav"><div class="wrap nav-inner"><a class="logo" href="/">AImanager</a><button class="hamburger" id="hamburger" aria-label="Меню" aria-expanded="false" aria-controls="navpanel"><span></span><span></span><span></span></button>
+  <div class="nav-panel" id="navpanel" hidden>
+    <a href="/wildberries">Для Wildberries</a>
+    <a href="/ozon">Для Ozon</a>
+    <a href="/pricing">Тарифы</a>
+    <a href="/faq">FAQ</a>
+    <a href="/niche">Ниши</a>
+    <a href="/blog/avtootvety-wildberries">Блог</a>
+    <a class="btn btn-primary nav-panel-cta" href="/#waitlist">Ранний доступ</a>
+  </div><a class="btn btn-sm btn-primary" href="/#waitlist">Ранний доступ</a></div></header>
 
 <section class="page-hero"><div class="wrap">
   <div class="breadcrumb"><a href="/">AImanager</a> → <a href="/niche">Ниши</a> → Электроника</div>
@@ -35,5 +44,17 @@
   <div class="cta-band"><h2>Подключите нишу «Электроника»</h2><p class="muted">7 дней триала.</p><a class="btn btn-primary" href="/#waitlist">Ранний доступ</a></div>
 </div></section>
 <footer class="footer"><div class="wrap footer-inner"><div class="muted small"><a href="/niche">← Все ниши</a> · <a href="/wildberries">Wildberries</a> · <a href="/ozon">Ozon</a> · <a href="/pricing">Тарифы</a></div><div class="muted small"><p>waitlist@example.com</p></div></div></footer>
+<script>
+(function(){
+  var btn=document.getElementById('hamburger'), panel=document.getElementById('navpanel');
+  if(!btn||!panel) return;
+  function close(){panel.hidden=true;btn.setAttribute('aria-expanded','false');}
+  function toggle(){panel.hidden=!panel.hidden;btn.setAttribute('aria-expanded',String(!panel.hidden));}
+  btn.addEventListener('click',function(e){e.stopPropagation();toggle();});
+  document.addEventListener('click',function(e){if(!panel.hidden && !panel.contains(e.target))close();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+  panel.addEventListener('click',function(e){if(e.target.closest('a'))close();});
+})();
+</script>
 </body>
 </html>
