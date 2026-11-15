@@ -5,6 +5,8 @@ Secrets: WB tokens are Fernet-encrypted at rest; responses carry only a mask.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -118,3 +120,81 @@ async def sync_shop(shop: CurrentShop, session: SessionDep, _access: ActiveAcces
 @router.get("/{shop_id}")
 async def get_shop(shop: CurrentShop) -> dict:
     return _public(shop)
+
+
+class AIConfigBody(BaseModel):
+    provider: Literal["openai", "openai_compatible", "ollama"] | None = None
+    model: str | None = Field(default=None, max_length=120)
+    base_url: str | None = Field(default=None, max_length=300)
+    api_key: str | None = Field(default=None, max_length=4000)  # write-only; "" clears
+    instructions: str | None = Field(default=None, max_length=4000)
+    style: Literal["friendly", "formal", "neutral", "premium", "warm", "concise"] | None = None
+    response_length: Literal["very_short", "short", "medium", "detailed"] | None = None
+    max_characters: int | None = Field(default=None, ge=32, le=2000)
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0)
+    use_emoji: bool | None = None
+    daily_limit: int | None = Field(default=None, ge=0, le=10000)
+    negative_requires_approval: bool | None = None
+
+
+def _ai_public(shop: Shop) -> dict:
+    key_set = bool(shop.ai_api_key_encrypted)
+    masked = None
+    if key_set:
+        try:
+            masked = mask_secret(SecretEncryptor.from_settings().decrypt(shop.ai_api_key_encrypted))
+        except ValueError:
+            masked = "����unreadable"
+    return {
+        "provider": shop.ai_provider,
+        "model": shop.ai_model,
+        "base_url": shop.ai_base_url,
+        "api_key_configured": key_set,
+        "api_key_masked": masked,
+        "instructions": shop.ai_instructions,
+        "style": shop.ai_style,
+        "response_length": shop.ai_response_length,
+        "max_characters": shop.ai_max_characters,
+        "temperature": shop.ai_temperature,
+        "use_emoji": shop.ai_use_emoji,
+        "daily_limit": shop.ai_daily_limit,
+        "negative_requires_approval": shop.ai_negative_requires_approval,
+    }
+
+
+_FIELD_MAP = {
+    "provider": "ai_provider",
+    "model": "ai_model",
+    "instructions": "ai_instructions",
+    "style": "ai_style",
+    "response_length": "ai_response_length",
+    "max_characters": "ai_max_characters",
+    "temperature": "ai_temperature",
+    "use_emoji": "ai_use_emoji",
+    "daily_limit": "ai_daily_limit",
+    "negative_requires_approval": "ai_negative_requires_approval",
+}
+
+
+@router.get("/{shop_id}/ai")
+async def get_ai_config(shop: CurrentShop) -> dict:
+    return _ai_public(shop)
+
+
+@router.patch("/{shop_id}/ai")
+async def update_ai_config(
+    shop: CurrentShop, body: AIConfigBody, session: SessionDep, _access: ActiveAccess
+) -> dict:
+    data = body.model_dump(exclude_unset=True)
+    if "api_key" in data:
+        raw_key = (data.pop("api_key") or "").strip()
+        shop.ai_api_key_encrypted = "" if raw_key == "" else SecretEncryptor.from_settings().encrypt(raw_key)
+    if "base_url" in data:
+        raw_url = (data.pop("base_url") or "").strip()
+        shop.ai_base_url = raw_url or None
+    for key, attr in _FIELD_MAP.items():
+        if key in data:
+            setattr(shop, attr, data[key])
+    await session.commit()
+    await session.refresh(shop)
+    return _ai_public(shop)

@@ -12,13 +12,17 @@ import argparse
 import asyncio
 import logging
 
+from sqlalchemy import select
+
+from wb_web.ai.generate import generate_for_review
 from wb_web.db.base import get_sessionmaker
+from wb_web.db.models import Review, Shop
 from wb_web.queue import WBReviewsClient, claim_next_task, publish_review
 
 logger = logging.getLogger("wb_web.worker")
 
 
-async def run_once(wb: WBReviewsClient | None = None) -> str | None:
+async def publish_sweep(wb: WBReviewsClient | None) -> str | None:
     sessionmaker = get_sessionmaker()
     async with sessionmaker() as session:
         review = await claim_next_task(session, lease_seconds=120)
@@ -33,6 +37,49 @@ async def run_once(wb: WBReviewsClient | None = None) -> str | None:
             extra={"review_id": review.id, "action": result.outcome},
         )
         return result.outcome
+
+
+async def process_generation_queue(max_items: int = 3) -> int:
+    """Generate replies for new reviews in semi/auto shops. Single-worker:
+    the generated/skipped transition is atomic enough for our scale."""
+    sessionmaker = get_sessionmaker()
+    generated = 0
+    async with sessionmaker() as session:
+        rows = (
+            await session.execute(
+                select(Review)
+                .join(Shop, Shop.id == Review.shop_id)
+                .where(
+                    Review.state == "new",
+                    Shop.mode.in_(("semi", "auto")),
+                    Shop.is_active.is_(True),
+                    Shop.automation_paused.is_(False),
+                )
+                .order_by(Review.id)
+                .limit(max_items)
+            )
+        ).scalars().all()
+        for review in rows:
+            shop = await session.get(Shop, review.shop_id)
+            try:
+                await generate_for_review(session, shop, review)
+                generated += 1
+                logger.info(
+                    "generated reply",
+                    extra={"review_id": review.id, "action": "generated"},
+                )
+            except Exception as exc:  # noqa: BLE001 — keep the batch alive
+                logger.warning(
+                    "generation failed",
+                    extra={"review_id": review.id, "status": type(exc).__name__},
+                )
+    return generated
+
+
+async def run_once(wb: WBReviewsClient | None = None) -> str | None:
+    generated = await process_generation_queue(3)
+    published = await publish_sweep(wb)
+    return f"generated={generated} published={published}"
 
 
 async def main_loop(interval: float) -> None:

@@ -16,6 +16,7 @@ from wb_web.auth.routes import router as auth_router
 from wb_web.core.config import get_settings
 from wb_web.core.logging import configure_logging
 from wb_web.db.base import get_engine
+from wb_web.reviews.routes import router as reviews_router
 from wb_web.shops.routes import router as shops_router
 
 logger = logging.getLogger("wb_web.request")
@@ -33,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(admin_router)
     app.include_router(shops_router)
+    app.include_router(reviews_router)
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next):

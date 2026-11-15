@@ -9,7 +9,17 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -62,6 +72,19 @@ class Shop(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
     automation_paused: Mapped[bool] = mapped_column(default=False)  # kill switch from admin
     wb_sandbox: Mapped[bool] = mapped_column(default=False)  # use WB sandbox endpoints (test reviews)
+    # BYOK AI configuration (api key stored as Fernet ciphertext, never returned by API)
+    ai_provider: Mapped[str] = mapped_column(String(32), default="openai")  # openai | openai_compatible | ollama
+    ai_model: Mapped[str] = mapped_column(String(120), default="")
+    ai_api_key_encrypted: Mapped[str] = mapped_column(Text, default="")
+    ai_base_url: Mapped[str | None] = mapped_column(String(300))
+    ai_instructions: Mapped[str | None] = mapped_column(Text)  # shop voice / owner rules
+    ai_style: Mapped[str] = mapped_column(String(16), default="friendly")
+    ai_response_length: Mapped[str] = mapped_column(String(16), default="short")
+    ai_max_characters: Mapped[int] = mapped_column(Integer, default=600)
+    ai_temperature: Mapped[float | None] = mapped_column(Float)
+    ai_use_emoji: Mapped[bool] = mapped_column(default=False)
+    ai_daily_limit: Mapped[int] = mapped_column(Integer, default=200)  # 0 = generation disabled
+    ai_negative_requires_approval: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, server_default=func.now())
 
     owner: Mapped[User] = relationship(back_populates="shops")
@@ -106,6 +129,9 @@ class Review(Base):
     generated_text: Mapped[str | None] = mapped_column(Text)
     review_meta: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at_wb: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ai_model: Mapped[str | None] = mapped_column(String(120))
+    ai_tokens_total: Mapped[int | None] = mapped_column(Integer)
+    generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, server_default=func.now())
