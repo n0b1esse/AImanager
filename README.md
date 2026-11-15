@@ -33,9 +33,17 @@ uvicorn wb_web.main:app --reload
 
 ```text
 src/wb_web/            # приложение
-  main.py              # FastAPI-приложение, /healthz
-  ...                  # auth, billing, shops, reviews, niches (Фазы 1–3)
-docs/                  # PLAN.md, FAZA_0_CHECKLIST.md, docs по модели
+  core/                # config, session (cookie), security (Fernet/hash), logging (JSON)
+  db/                  # base.py (async engine), models.py
+  auth/                # magic-link service/routes + deps (current_user, tenant scope)
+  billing/             # access gate (trial/active/grace/read_only), PaymentProvider + manual activation
+  admin/               # owner-only v1: summary/users/activate/kill-switch/deactivate + audit log
+  shops/               # tenant-scoped /shops (WB token encrypted)
+  queue/               # claim/lease + idempotent publish protocol
+  worker.py            # background worker skeleton
+  main.py              # /healthz, /readyz, request-id middleware
+docs/                  # PLAN.md, FAZA_0_CHECKLIST.md, SECURITY.md
+alembic/               # migrations
 tests/                 # pytest
 ```
 

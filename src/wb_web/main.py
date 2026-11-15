@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from wb_web import __version__
+from wb_web.admin.routes import router as admin_router
 from wb_web.auth.routes import router as auth_router
 from wb_web.core.config import get_settings
 from wb_web.core.logging import configure_logging
@@ -30,6 +31,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="WB Review AI", version=__version__)
     app.include_router(auth_router)
+    app.include_router(admin_router)
     app.include_router(shops_router)
 
     @app.middleware("http")
