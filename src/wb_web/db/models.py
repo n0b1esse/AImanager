@@ -61,6 +61,7 @@ class Shop(Base):
     mode: Mapped[str] = mapped_column(String(16), default="manual")  # manual | semi | auto
     is_active: Mapped[bool] = mapped_column(default=True)
     automation_paused: Mapped[bool] = mapped_column(default=False)  # kill switch from admin
+    wb_sandbox: Mapped[bool] = mapped_column(default=False)  # use WB sandbox endpoints (test reviews)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, server_default=func.now())
 
     owner: Mapped[User] = relationship(back_populates="shops")

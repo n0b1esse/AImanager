@@ -14,6 +14,12 @@ from wb_web.billing.access import ActiveAccess
 from wb_web.core.security import SecretEncryptor, mask_secret
 from wb_web.db.models import Shop
 from wb_web.niches import load_packs
+from wb_web.wb.errors import (
+    WildberriesAuthenticationError,
+    WildberriesError,
+    WildberriesRateLimitError,
+)
+from wb_web.wb.sync import sync_shop_reviews, verify_shop_connection
 
 router = APIRouter(prefix="/shops", tags=["shops"])
 
@@ -74,6 +80,39 @@ async def create_shop(body: CreateShopBody, user: CurrentUser, session: SessionD
 async def list_shops(user: CurrentUser, session: SessionDep) -> dict:
     result = await session.execute(select(Shop).where(Shop.owner_id == user.id).order_by(Shop.id))
     return {"shops": [_public(shop) for shop in result.scalars()]}
+
+
+def _wb_http_error(exc: WildberriesError) -> HTTPException:
+    if isinstance(exc, WildberriesAuthenticationError):
+        return HTTPException(status_code=400, detail="WB token is invalid or expired")
+    if isinstance(exc, WildberriesRateLimitError):
+        retry_after = getattr(exc, "retry_after", None)
+        return HTTPException(
+            status_code=429,
+            detail={"error": "wb_rate_limit", "retry_after": retry_after},
+        )
+    return HTTPException(status_code=502, detail="Wildberries API request failed")
+
+
+@router.post("/{shop_id}/verify")
+async def verify_shop(shop: CurrentShop, session: SessionDep, _access: ActiveAccess) -> dict:
+    try:
+        result = await verify_shop_connection(shop)
+    except WildberriesError as exc:
+        raise _wb_http_error(exc) from exc
+    if result.get("seller_name"):
+        shop.wb_seller_name = result["seller_name"]
+        await session.commit()
+    return result
+
+
+@router.post("/{shop_id}/sync")
+async def sync_shop(shop: CurrentShop, session: SessionDep, _access: ActiveAccess) -> dict:
+    try:
+        result = await sync_shop_reviews(session, shop)
+    except WildberriesError as exc:
+        raise _wb_http_error(exc) from exc
+    return {"fetched": result.fetched, "created": result.created, "updated": result.updated}
 
 
 @router.get("/{shop_id}")
