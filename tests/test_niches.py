@@ -19,6 +19,20 @@ def test_unknown_selection_returns_base() -> None:
     assert [p.id for p in packs] == ["base"]
 
 
+def test_all_packs_load_into_instructions() -> None:
+    from dataclasses import replace
+
+    from wb_web.ai.models import AIProfile
+
+    packs = load_packs()
+    profile = AIProfile(provider="ollama", model="m")
+    for pack_id, pack in packs.items():
+        text = build_instructions(replace(profile, packs=(pack,)))
+        assert pack.name in text
+        assert "Нельзя утверждать" in text
+        assert "Не обещай возврат денег" in text  # base safety always present
+
+
 def test_instructions_contain_safety_rules() -> None:
     text = build_instructions(AIProfile(provider="ollama", model="m"))
     assert "Не обещай возврат денег" in text
