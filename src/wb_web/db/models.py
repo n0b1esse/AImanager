@@ -92,6 +92,12 @@ class Review(Base):
     shop_id: Mapped[int] = mapped_column(ForeignKey("shops.id", ondelete="CASCADE"), index=True)
     wb_review_id: Mapped[str] = mapped_column(String(64), index=True)
     state: Mapped[str] = mapped_column(String(16), default="new", index=True)
+    # Claim lease for workers (NULL claimed_at or expired lease => reclaimable)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    claim_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    claim_token: Mapped[str | None] = mapped_column(String(64))
+    # Idempotency marker written BEFORE the publish HTTP call: aim:{shop_id}:{wb_review_id}
+    publication_marker: Mapped[str | None] = mapped_column(String(128))
     rating: Mapped[int | None] = mapped_column(Integer)
     text: Mapped[str] = mapped_column(Text())
     product_name: Mapped[str | None] = mapped_column(String(300))
