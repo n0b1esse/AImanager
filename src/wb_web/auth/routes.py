@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from wb_web.auth.deps import CurrentUser, SessionDep
 from wb_web.auth.service import InvalidTokenError, request_magic_link, verify_magic_link
+from wb_web.billing.access import resolve_access
 from wb_web.core.config import get_settings
 from wb_web.core.session import SESSION_COOKIE, SESSION_TTL_SECONDS, sign_session
 from wb_web.db.models import Subscription
@@ -68,6 +69,7 @@ async def logout() -> Response:
 
 @router.get("/me")
 async def me(user: CurrentUser, session: SessionDep) -> dict:
+    access = await resolve_access(user, session)
     subscription = (
         await session.execute(select(Subscription).where(Subscription.user_id == user.id))
     ).scalar_one_or_none()
@@ -75,6 +77,7 @@ async def me(user: CurrentUser, session: SessionDep) -> dict:
         "id": user.id,
         "email": user.email,
         "trial_ends_at": user.trial_ends_at.isoformat() if user.trial_ends_at else None,
+        "access": {"state": access.state, "reason": access.reason, "allowed": access.allowed},
         "subscription": None
         if subscription is None
         else {

@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from wb_web.auth.deps import CurrentShop, CurrentUser, SessionDep
+from wb_web.billing.access import ActiveAccess
 from wb_web.core.security import SecretEncryptor, mask_secret
 from wb_web.db.models import Shop
 from wb_web.niches import load_packs
@@ -45,7 +46,7 @@ def _public(shop: Shop) -> dict:
 
 
 @router.post("", status_code=201)
-async def create_shop(body: CreateShopBody, user: CurrentUser, session: SessionDep) -> dict:
+async def create_shop(body: CreateShopBody, user: CurrentUser, session: SessionDep, _access: ActiveAccess) -> dict:
     name = body.name.strip()
     wb_token = body.wb_token.strip()
     available = set(load_packs())
