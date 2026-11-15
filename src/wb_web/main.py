@@ -6,11 +6,13 @@ from fastapi import FastAPI
 
 from wb_web import __version__
 from wb_web.auth.routes import router as auth_router
+from wb_web.shops.routes import router as shops_router
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="WB Review AI", version=__version__)
     app.include_router(auth_router)
+    app.include_router(shops_router)
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:
