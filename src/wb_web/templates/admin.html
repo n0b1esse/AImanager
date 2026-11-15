@@ -10,6 +10,16 @@
 </div>
 
 <div class="panel">
+  <h3>Продажи</h3>
+  <div class="grid cols-3" style="margin-bottom:0">
+    <div class="stat"><div class="num">{{ sales.paid_users }}</div><div class="lbl">платящих (active+grace)</div></div>
+    <div class="stat"><div class="num">{{ (sales.conversion * 100) | round(1) }}%</div><div class="lbl">конверсия в оплату (от всех)</div></div>
+    <div class="stat"><div class="num">{{ sales.activations_30d }}</div><div class="lbl">активаций за 30 дней</div></div>
+  </div>
+  <p class="muted small" style="margin:12px 0 0">Триалов: {{ sales.trial_users }} · grace: {{ sales.grace_users }} · read-only: {{ sales.read_only }}{% if sales.prices_configured %} · MRR ≈ {{ sales.mrr }}{% else %} · MRR: цены не заданы в env (PRICE_STARTER/PRO/BUSINESS){% endif %}</p>
+</div>
+
+<div class="panel">
   <h3>Пользователи</h3>
   <table class="table">
     <thead><tr><th>ID</th><th>Email</th><th>План</th><th>Статус</th><th>Период до</th><th>Действия</th></tr></thead>

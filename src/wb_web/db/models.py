@@ -150,3 +150,16 @@ class AdminAuditLog(Base):
     detail: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     ip: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, server_default=func.now())
+
+
+class ProductEvent(Base):
+    """Append-only product analytics (funnels, activation, conversion)."""
+
+    __tablename__ = "product_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event: Mapped[str] = mapped_column(String(64), index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    shop_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    event_meta: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, server_default=func.now(), index=True)

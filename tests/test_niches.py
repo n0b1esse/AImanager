@@ -26,7 +26,7 @@ def test_all_packs_load_into_instructions() -> None:
 
     packs = load_packs()
     profile = AIProfile(provider="ollama", model="m")
-    for pack_id, pack in packs.items():
+    for _pack_id, pack in packs.items():
         text = build_instructions(replace(profile, packs=(pack,)))
         assert pack.name in text
         assert "Нельзя утверждать" in text

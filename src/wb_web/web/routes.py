@@ -26,11 +26,13 @@ from wb_web.auth.service import request_magic_link
 from wb_web.billing.access import resolve_access
 from wb_web.billing.activate import activate_subscription
 from wb_web.core.config import get_settings
+from wb_web.core.events import track
 from wb_web.core.security import SecretEncryptor, mask_secret
 from wb_web.db.base import get_session
 from wb_web.db.models import AdminAuditLog, Review, Shop, Subscription, User
 from wb_web.niches import load_packs
 from wb_web.queue import publish_review
+from wb_web.stats import admin_sales, client_stats
 from wb_web.wb.adapter import WBReviewsAdapter
 from wb_web.wb.sync import build_client_for_shop, sync_shop_reviews, verify_shop_connection
 
@@ -216,6 +218,7 @@ async def shops_create(
     )
     session.add(shop)
     await session.commit()
+    await track(session, event="shop.create", user_id=user.id, shop_id=shop.id)
     return _with_msg("/app/shops", "Магазин подключён")
 
 
@@ -434,6 +437,7 @@ async def review_approve(request: Request, session: SessionDep, shop_id: int, re
         return _with_msg("/app/reviews", "Одобрять можно только готовый ответ", "err")
     review.state = "approved"
     await session.commit()
+    await track(session, event="review.approved", user_id=user.id, shop_id=shop_id)
     return _with_msg("/app/reviews", "Ответ одобрен. Публикация — только по кнопке «Опубликовать».")
 
 
@@ -445,6 +449,7 @@ async def review_skip(request: Request, session: SessionDep, shop_id: int, revie
         return _with_msg("/app/reviews", "Отзыв не найден", "err")
     review.state = "skipped"
     await session.commit()
+    await track(session, event="review.skipped", user_id=user.id, shop_id=shop_id)
     return _with_msg("/app/reviews", "Отзыв пропущен")
 
 
@@ -462,6 +467,7 @@ async def review_publish(request: Request, session: SessionDep, shop_id: int, re
     try:
         result = await publish_review(session, review, WBReviewsAdapter(client))
         if result.outcome == "published":
+            await track(session, event="review.published", user_id=user.id, shop_id=shop_id)
             return _with_msg("/app/reviews", "Ответ опубликован в Wildberries")
         if result.outcome == "remote_already_answered":
             return _with_msg("/app/reviews", "На стороне WB уже есть ответ — отмечен опубликованным")
@@ -476,6 +482,14 @@ async def review_publish(request: Request, session: SessionDep, shop_id: int, re
         return _with_msg("/app/reviews", f"WB недоступен: {exc.__class__.__name__}", "err")
     finally:
         await client.aclose()
+
+
+@router.get("/app/stats")
+async def stats_page(request: Request, session: SessionDep):
+    user, access, ctx = await _ctx(request, session)
+    stats = await client_stats(session, user.id)
+    ctx.update({"stats": stats})
+    return templates.TemplateResponse(request, "stats.html", ctx)
 
 
 @router.get("/app/billing")
@@ -534,11 +548,13 @@ async def admin_page(request: Request, session: SessionDep):
     audit_entries = (
         await session.execute(select(AdminAuditLog).order_by(AdminAuditLog.id.desc()).limit(10))
     ).scalars().all()
+    sales = await admin_sales(session)
     ctx.update(
         {
             "summary": {"users_total": users_total, "shops_total": shops_total, "plans": plan_counts},
             "rows": rows,
             "audit_entries": audit_entries,
+            "sales": sales,
         }
     )
     return templates.TemplateResponse(request, "admin.html", ctx)

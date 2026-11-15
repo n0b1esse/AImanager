@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Статистика — AImanager{% endblock %}
+{% block content %}
+<h1>Статистика</h1>
+
+<div class="grid cols-3">
+  <div class="panel stat"><div class="num">{{ stats.published_7d }}</div><div class="lbl">Опубликовано за 7 дней</div></div>
+  <div class="panel stat"><div class="num">{{ stats.published_30d }}</div><div class="lbl">Опубликовано за 30 дней</div></div>
+  <div class="panel stat"><div class="num">{{ stats.hours_saved_30d }} ч</div><div class="lbl">Сэкономлено времени за 30 дней (≈5 мин на ответ)</div></div>
+</div>
+
+<div class="grid cols-3">
+  <div class="panel stat"><div class="num">{{ stats.generated_30d }}</div><div class="lbl">Сгенерировано ответов</div></div>
+  <div class="panel stat"><div class="num">{{ stats.approved_30d }}</div><div class="lbl">Одобрено</div></div>
+  <div class="panel stat"><div class="num">{{ (stats.approval_rate * 100) | round(0) }}%</div><div class="lbl">Доля одобрения от всех сгенерированных</div></div>
+</div>
+
+<div class="panel">
+  <div style="background:var(--panel-2);border-radius:8px;height:12px;overflow:hidden">
+    <div style="height:100%;width:{{ (stats.approval_rate * 100) | round(0) }}%;background:linear-gradient(135deg,var(--accent),var(--accent-2))"></div>
+  </div>
+  <p class="muted small" style="margin-top:10px">Показатели считаются по событиям использования (вход, генерация, одобрение, публикация). Метрика «доля ответов, ушедших без правок на первом согласовании» появится после пилота — она будет главной для доработки нишевых паков.</p>
+</div>
+{% endblock %}

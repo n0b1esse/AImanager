@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from wb_web.core.events import track
 from wb_web.core.security import SecretEncryptor
 from wb_web.db.models import Review, Shop
 from wb_web.wb.client import WildberriesClient
@@ -106,6 +107,13 @@ async def sync_shop_reviews(
                 )
                 created += 1
         await session.commit()
+        await track(
+            session,
+            event="sync.completed",
+            user_id=shop.owner_id,
+            shop_id=shop.id,
+            meta={"fetched": fetched, "created": created, "updated": updated},
+        )
         return SyncResult(fetched=fetched, created=created, updated=updated)
     finally:
         if own_client:

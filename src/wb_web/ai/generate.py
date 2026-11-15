@@ -23,6 +23,7 @@ from wb_web.ai.providers import (
     OpenAICompatibleProvider,
     OpenAIProvider,
 )
+from wb_web.core.events import track
 from wb_web.core.security import SecretEncryptor
 from wb_web.db.models import Review, Shop
 from wb_web.niches import get_packs_for_shop
@@ -157,4 +158,11 @@ async def generate_for_review(
     review.state = "generated"
     review.error = None
     await session.commit()
+    await track(
+        session,
+        event="review.generated",
+        user_id=shop.owner_id,
+        shop_id=shop.id,
+        meta={"model": result.model, "tokens": result.usage.total_tokens},
+    )
     return result

@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from wb_web.admin.audit import record_admin_action
+from wb_web.core.events import track
 from wb_web.db.models import Subscription, User
 
 VALID_PLANS = frozenset({"starter", "pro", "business"})
@@ -67,6 +68,12 @@ async def activate_subscription(
         target=f"user:{user.id}",
         detail=detail,
         ip=ip,
+    )
+    await track(
+        session,
+        event="subscription.activated",
+        user_id=user.id,
+        meta={"plan": plan, "months": months},
     )
     await session.refresh(subscription)
     return subscription

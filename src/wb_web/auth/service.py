@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from wb_web.core.config import get_settings
+from wb_web.core.events import track
 from wb_web.core.security import generate_token, hash_token
 from wb_web.db.models import MagicLinkToken, Subscription, User
 
@@ -45,6 +46,7 @@ async def request_magic_link(session: AsyncSession, email: str) -> str:
                 current_period_end=user.trial_ends_at,
             )
         )
+        await track(session, event="user.signup", user_id=user.id)
 
     raw_token = generate_token()
     ttl = timedelta(minutes=settings.magic_link_ttl_minutes)
@@ -79,4 +81,5 @@ async def verify_magic_link(session: AsyncSession, raw_token: str) -> User:
 
     user = (await session.execute(select(User).where(User.id == token.user_id))).scalar_one()
     await session.commit()
+    await track(session, event="user.login", user_id=user.id)
     return user
