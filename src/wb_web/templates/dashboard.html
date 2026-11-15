@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Обзор — AImanager{% endblock %}
+{% block content %}
+<h1>Обзор</h1>
+
+<div class="grid cols-3">
+  <div class="panel stat"><div class="num">{{ stats.new }}</div><div class="lbl">Новых отзывов</div></div>
+  <div class="panel stat"><div class="num">{{ stats.generated }}</div><div class="lbl">Сгенерировано, ждут проверки</div></div>
+  <div class="panel stat"><div class="num">{{ stats.approved }}</div><div class="lbl">Одобрено, готовы к публикации</div></div>
+</div>
+
+<div class="grid cols-2">
+  <div class="panel">
+    <h3>Подписка</h3>
+    <p><span class="badge">{{ access.state }}</span> · план <b>{{ access.plan }}</b></p>
+    {% if access.state == "trial" and access.trial_ends_at %}
+      <p class="muted">Триал до {{ access.trial_ends_at.strftime("%d.%m.%Y") }}</p>
+    {% endif %}
+    {% if access.current_period_end %}
+      <p class="muted">Текущий период до {{ access.current_period_end.strftime("%d.%m.%Y") }}</p>
+    {% endif %}
+    <a class="btn small ghost" href="/app/billing">Подписка и оплата →</a>
+  </div>
+  <div class="panel">
+    <h3>Магазины ({{ shops|length }})</h3>
+    {% if shops %}
+      {% for shop in shops %}
+        <p><a href="/app/shops">{{ shop.name }}</a>{% if shop.wb_seller_name %} · <span class="muted">{{ shop.wb_seller_name }}</span>{% endif %}</p>
+      {% endfor %}
+    {% else %}
+      <p class="muted">Ещё нет ни одного магазина.</p>
+    {% endif %}
+    <a class="btn primary small" href="/app/shops">Добавить магазин →</a>
+  </div>
+</div>
+
+<p class="muted small">Первый запуск: подключите магазин → «Проверить» → выберите нишу → настройте ИИ (свой ключ) → <a href="/app/reviews">в очередь →</a></p>
+{% endblock %}

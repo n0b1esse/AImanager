@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Магазины — AImanager{% endblock %}
+{% block content %}
+<div class="row" style="justify-content:space-between">
+  <h1>Магазины</h1>
+  <button class="btn small ghost" onclick="document.getElementById('add-shop').scrollIntoView({behavior:'smooth'})">+ Добавить</button>
+</div>
+
+{% for shop in shops %}
+<div class="panel">
+  <div class="row" style="justify-content:space-between;align-items:flex-start">
+    <div>
+      <h3 style="margin-bottom:4px">{{ shop.name }}</h3>
+      <div class="muted small">WB-токен: <span class="mono">{{ token_masks.get(shop.id) }}</span>{% if shop.wb_seller_name %} · <span class="badge">{{ shop.wb_seller_name }}</span>{% endif %}</div>
+      <div class="small" style="margin-top:6px">Ниши:
+        {% if shop.niche_ids %}{{ shop.niche_ids | join(", ") }}{% else %}<span class="muted">не выбраны (универсальный пак)</span>{% endif %}
+        · режим: <b>{{ {'manual':'ручной','semi':'полуавто','auto':'авто'}[shop.mode] if shop.mode in ['manual','semi','auto'] else shop.mode }}</b>
+        {% if shop.automation_paused %} · <span class="badge failed">автоматика приостановлена</span>{% endif %}
+      </div>
+    </div>
+    <div class="row">
+      <form method="post" action="/app/shops/{{ shop.id }}/verify">
+        <button class="btn small" type="submit" {% if not access.allowed %}disabled title="Подписка неактивна"{% endif %}>Проверить WB</button>
+      </form>
+      <form method="post" action="/app/shops/{{ shop.id }}/sync">
+        <button class="btn small primary" type="submit" {% if not access.allowed %}disabled title="Подписка неактивна"{% endif %}>Синхронизировать</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:10px">
+    <a class="btn small ghost" href="/app/shops/{{ shop.id }}/ai">Настройки ИИ →</a>
+    <a class="btn small ghost" href="/app/reviews?shop_id={{ shop.id }}">Отзывы →</a>
+  </div>
+</div>
+{% endfor %}
+
+<div class="panel" id="add-shop">
+  <h3>Подключить магазин</h3>
+  <form method="post" action="/app/shops">
+    <label for="name">Название (как вы его видите)</label>
+    <input type="text" id="name" name="name" required maxlength="200" placeholder="Мой магазин на WB">
+
+    <label for="wb_token">WB API-токен <span class="muted">(категория «Вопросы и отзывы»; хранится зашифрованно)</span></label>
+    <input type="text" id="wb_token" name="wb_token" required minlength="8" placeholder="ey..." autocomplete="off">
+
+    <label>Ниши (необязательно, можно пропустить — будет универсальный пак)</label>
+    <div class="row">
+      {% for nid, pack in niches.items() %}
+      <label class="row small" style="color:var(--muted);gap:6px;margin:4px 0"><input type="checkbox" name="niche_ids" value="{{ nid }}" style="width:auto;margin:0"> {{ pack.name }}</label>
+      {% endfor %}
+    </div>
+
+    <div class="form-foot">
+      <button class="btn primary" type="submit" {% if not access.allowed %}disabled title="Подписка неактивна"{% endif %}>Подключить</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

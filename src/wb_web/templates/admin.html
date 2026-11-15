@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Админка — AImanager{% endblock %}
+{% block content %}
+<h1>Админка <span class="badge">owner</span></h1>
+
+<div class="grid cols-3">
+  <div class="panel stat"><div class="num">{{ summary.users_total }}</div><div class="lbl">Пользователей</div></div>
+  <div class="panel stat"><div class="num">{{ summary.shops_total }}</div><div class="lbl">Магазинов</div></div>
+  <div class="panel stat"><div class="num">{{ summary.plans | length }}</div><div class="lbl">Планов с подписчиками</div></div>
+</div>
+
+<div class="panel">
+  <h3>Пользователи</h3>
+  <table class="table">
+    <thead><tr><th>ID</th><th>Email</th><th>План</th><th>Статус</th><th>Период до</th><th>Действия</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td class="mono">{{ row.id }}</td>
+        <td>{{ row.email }}{% if not row.is_active %} <span class="badge failed">disabled</span>{% endif %}</td>
+        <td>{{ row.subscription.plan if row.subscription else "—" }}</td>
+        <td>{{ row.subscription.status if row.subscription else "—" }}</td>
+        <td class="small">{{ row.subscription.current_period_end[:10] if row.subscription and row.subscription.current_period_end else "—" }}</td>
+        <td>
+          <form method="post" action="/app/admin/users/{{ row.id }}/activate" class="row" style="gap:6px">
+            <select name="plan">
+              {% for p in ["starter", "pro", "business"] %}<option value="{{ p }}" {% if row.subscription and row.subscription.plan == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+            </select>
+            <input type="number" name="months" value="1" min="1" max="24" style="width:64px">
+            <button class="btn small primary" type="submit">Активировать</button>
+          </form>
+          <form method="post" action="/app/admin/users/{{ row.id }}/toggle" style="margin-top:6px">
+            <input type="hidden" name="active" value="{{ 'false' if row.is_active else 'true' }}">
+            <button class="btn small {{ 'danger' if row.is_active else '' }}" type="submit">{{ 'Деактивировать' if row.is_active else 'Включить' }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="panel">
+  <h3>Последние действия</h3>
+  <table class="table">
+    <thead><tr><th>ID</th><th>Кто</th><th>Действие</th><th>Цель</th><th>Когда</th></tr></thead>
+    <tbody>
+      {% for e in audit_entries %}
+      <tr><td class="mono">{{ e.id }}</td><td>{{ e.actor_admin_id }}</td><td>{{ e.action }}</td><td class="mono small">{{ e.target }}</td><td class="small">{{ e.created_at.strftime("%d.%m %H:%M") }}</td></tr>
+      {% endfor %}
+      {% if not audit_entries %}<tr><td colspan="5" class="muted">пока пусто</td></tr>{% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

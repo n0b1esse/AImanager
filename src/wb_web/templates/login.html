@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Вход — AImanager{% endblock %}
+{% block content %}
+<div class="login-box">
+  <div class="panel">
+    <h1 style="margin-top:0">AImanager</h1>
+    <p class="muted">Ответы на отзывы Wildberries от вашего LLM. Семь дней триала.</p>
+    {% if sent %}
+      <div class="flash ok">Ссылка для входа отправлена на <b>{{ sent }}</b>. Проверьте почту (или консоль сервера в dev-режиме).</div>
+      {% if dev_link %}
+      <p class="muted small">DEV: <a href="{{ dev_link }}">{{ dev_link }}</a></p>
+      {% endif %}
+      <p><a href="/login">Другой email →</a></p>
+    {% else %}
+    <form method="post" action="/login">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" autofocus>
+      <div class="form-foot">
+        <button class="btn primary" type="submit" style="width:100%">Получить ссылку для входа</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

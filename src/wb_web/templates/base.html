@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}AImanager — ответы на отзывы Wildberries{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23a73afd'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>A</text></svg>">
+</head>
+<body>
+{% if user %}
+<header class="topbar">
+  <a class="logo" href="/app">AImanager</a>
+  <nav>
+    <a href="/app">Обзор</a>
+    <a href="/app/reviews">Очередь</a>
+    <a href="/app/shops">Магазины</a>
+    <a href="/app/billing">Подписка</a>
+    {% if is_owner %}<a href="/app/admin">Админка</a>{% endif %}
+  </nav>
+  <div class="spacer"></div>
+  <span class="who">{{ user.email }}</span>
+  <form method="post" action="/auth/logout" style="display:inline">
+    <button class="btn small ghost" type="submit">Выход</button>
+  </form>
+</header>
+{% endif %}
+
+<main class="container">
+  {% if access and not access.allowed %}
+  <div class="banner">
+    {% if access.reason == "trial_expired" %}Пробный период закончился.{% else %}Подписка приостановлена ({{ access.state }}).{% endif %}
+    Сервис работает в режиме чтения. <a href="/app/billing">Оплатить подписку →</a>
+  </div>
+  {% elif access and access.state == "grace" %}
+  <div class="banner">Платёж под вопросом: действует льготный период (grace). <a href="/app/billing">Как оплатить →</a></div>
+  {% endif %}
+
+  {% if flash %}<div class="flash {{ flash_kind or 'ok' }}">{{ flash }}</div>{% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

@@ -1,0 +1,1 @@
+"""HTML (PRG) frontend routes."""

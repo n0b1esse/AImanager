@@ -1,9 +1,14 @@
-"""Auth routes: request magic link, verify (sets session cookie), logout, me."""
+"""Auth routes: JSON API + cookie session.
+
+GET /auth/link consumes a magic link in the browser (email clients click
+https links, they cannot POST) and lands on /app.
+POST /auth/logout is the browser button: clears the cookie, redirects to /login.
+"""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
 
@@ -62,8 +67,19 @@ async def verify_link(body: VerifyBody, session: SessionDep) -> Response:
 
 @router.post("/logout")
 async def logout() -> Response:
-    response = Response(status_code=204)
+    response = RedirectResponse("/login", status_code=303)
     response.delete_cookie(SESSION_COOKIE, path="/")
+    return response
+
+
+@router.get("/link")
+async def consume_link(token: str, session: SessionDep) -> Response:
+    try:
+        user = await verify_magic_link(session, token)
+    except InvalidTokenError:
+        return RedirectResponse("/login?msg=Ссылка%20недействительна%20или%20устарела&kind=err", status_code=303)
+    response = RedirectResponse("/app", status_code=303)
+    _set_session_cookie(response, user.id)
     return response
 
 

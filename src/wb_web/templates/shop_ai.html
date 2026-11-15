@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Настройки ИИ — {{ shop.name }}{% endblock %}
+{% block content %}
+<p class="muted"><a href="/app/shops">← Магазины</a></p>
+<h1>Настройки ИИ · {{ shop.name }}</h1>
+<p class="muted small">Ключ хранится зашифрованным и никогда не показывается. Вопросы о сомовой/тенговой цене лимитов уточняем при продлении.</p>
+
+<div class="panel">
+  <form method="post" action="/app/shops/{{ shop.id }}/ai">
+    <div class="grid cols-2">
+      <div>
+        <label for="ai_provider">Провайдер</label>
+        <select id="ai_provider" name="ai_provider">
+          {% for value, label in [("openai", "OpenAI (Responses API)"), ("openai_compatible", "OpenAI-compatible (свой endpoint)"), ("ollama", "Ollama (локально/свой сервер)")] %}
+          <option value="{{ value }}" {% if shop.ai_provider == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="ai_model">Модель</label>
+        <input type="text" id="ai_model" name="model" value="{{ shop.ai_model }}" placeholder="gpt-4.1-mini / gemma3:4b / …" maxlength="120">
+      </div>
+    </div>
+
+    <label for="ai_base_url">Base URL <span class="muted">(для OpenAI-compatible / Ollama; для OpenAI можно пусто)</span></label>
+    <input type="text" id="ai_base_url" name="base_url" value="{{ shop.ai_base_url or '' }}" placeholder="https://api.provider.com/v1 · http://127.0.0.1:11434" maxlength="300">
+
+    <label for="ai_api_key">API-ключ {% if shop.ai_api_key_encrypted %}<span class="badge">сохранён: {{ api_key_masked }}</span>{% endif %}</label>
+    <input type="password" id="ai_api_key" name="api_key" autocomplete="new-password" placeholder="{% if shop.ai_api_key_encrypted %}Новый ключ (заменить) или пусто — оставить{% else %}sk-…{% endif %}">
+    <p class="muted small">Для Ollama ключ не нужен.</p>
+
+    <label for="ai_instructions">Голос магазина / доп. правила <span class="muted">(необязательно)</span></label>
+    <textarea id="ai_instructions" name="instructions" rows="3" maxlength="4000" placeholder="Бренд «ТестПром», обращаемся на «вы», никаких обещаний вне правил…">{{ shop.ai_instructions or '' }}</textarea>
+
+    <div class="grid cols-2">
+      <div>
+        <label for="ai_style">Стиль</label>
+        <select id="ai_style" name="style">
+          {% for value, label in [("friendly","дружелюбный"),("formal","официальный"),("neutral","нейтральный"),("premium","премиальный"),("warm","тёплый"),("concise","лаконичный")] %}
+          <option value="{{ value }}" {% if shop.ai_style == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="ai_response_length">Длина ответа</label>
+        <select id="ai_response_length" name="response_length">
+          {% for value, label in [("very_short","1 предложение"),("short","1–2"),("medium","2–3"),("detailed","3–4")] %}
+          <option value="{{ value }}" {% if shop.ai_response_length == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="grid cols-2">
+      <div>
+        <label for="ai_max_characters">Макс. символов</label>
+        <input type="number" id="ai_max_characters" name="max_characters" min="32" max="2000" value="{{ shop.ai_max_characters }}">
+      </div>
+      <div>
+        <label for="ai_daily_limit">Дневной лимит генераций (0 = выкл)</label>
+        <input type="number" id="ai_daily_limit" name="daily_limit" min="0" max="10000" value="{{ shop.ai_daily_limit }}">
+      </div>
+    </div>
+
+    <div class="grid cols-2">
+      <div>
+        <label for="ai_temperature">Температура (пусто = дефолт модели)</label>
+        <input type="number" id="ai_temperature" name="temperature" min="0" max="2" step="0.1" value="{{ shop.ai_temperature if shop.ai_temperature is not none else '' }}">
+      </div>
+      <div>
+        <label>Эмодзи в ответах</label>
+        <label class="row" style="margin:0"><input type="checkbox" name="use_emoji" value="true" {% if shop.ai_use_emoji %}checked{% endif %} style="width:auto"> разрешить максимум один</label>
+      </div>
+    </div>
+
+    <div class="form-foot">
+      <button class="btn primary" type="submit">Сохранить</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

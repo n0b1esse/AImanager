@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Очередь отзывов — AImanager{% endblock %}
+{% block content %}
+<h1>Очередь отзывов</h1>
+
+<form method="get" action="/app/reviews" class="panel">
+  <div class="row">
+    <div>
+      <label for="state">Статус</label>
+      <select id="state" name="state">
+        <option value="" {% if not state %}selected{% endif %}>Все</option>
+        {% for value, label in [("new","Новые"),("generated","Сгенерированы"),("approved","Одобрены"),("published","Опубликованы"),("skipped","Пропущены"),("failed","Ошибки")] %}
+        <option value="{{ value }}" {% if state == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="shop_id">Магазин</label>
+      <select id="shop_id" name="shop_id">
+        <option value="" {% if not shop_id %}selected{% endif %}>Все магазины</option>
+        {% for shop in shops %}<option value="{{ shop.id }}" {% if shop_id == shop.id %}selected{% endif %}>{{ shop.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div style="align-self:end"><button class="btn" type="submit">Фильтр</button></div>
+  </div>
+</form>
+
+{% if not reviews %}
+  <div class="panel muted">Ничего не найдено. Подключите магазин и нажмите «Синхронизировать» на странице магазинов.</div>
+{% endif %}
+
+{% for item in reviews %}
+<div class="review-card">
+  <div class="head">
+    <div class="row">
+      <span class="badge {{ item.state }}">{{ item.state_label }}</span>
+      <span title="Оценка">{{ '★' * (item.rating or 0) }}{{ '☆' * (5 - (item.rating or 0)) }}</span>
+      <span class="muted small">{{ shop_names.get(item.shop_id) }}</span>
+    </div>
+    <span class="muted small mono">#{{ item.wb_review_id }}</span>
+  </div>
+
+  <div class="review-text">{{ item.text or "—" }}</div>
+  {% if item.generated_text %}<div class="review-gen">{{ item.generated_text }}</div>{% endif %}
+  {% if item.error %}<div class="flash err small">{{ item.error }}</div>{% endif %}
+
+  {% if item.state in ["new", "generated", "approved"] %}
+  <form method="post" action="/app/shops/{{ item.shop_id }}/reviews/{{ item.id }}/edit" style="margin-top:8px">
+    <label class="small" for="gen-{{ item.id }}">Текст ответа (можно поправить перед публикацией)</label>
+    <textarea id="gen-{{ item.id }}" name="text" rows="3" maxlength="5000">{{ item.generated_text or "" }}</textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn small" type="submit" {% if not access.allowed %}disabled{% endif %}>Сохранить текст</button>
+    </div>
+  </form>
+  {% endif %}
+
+  <div class="row" style="margin-top:10px">
+    {% if item.state == "new" %}
+      <form method="post" action="/app/shops/{{ item.shop_id }}/reviews/{{ item.id }}/generate"><button class="btn primary small" type="submit" {% if not access.allowed %}disabled{% endif %}>Сгенерировать</button></form>
+    {% elif item.state == "generated" %}
+      <form method="post" action="/app/shops/{{ item.shop_id }}/reviews/{{ item.id }}/generate"><button class="btn small" type="submit" {% if not access.allowed %}disabled{% endif %}>Перегенерировать</button></form>
+      <form method="post" action="/app/shops/{{ item.shop_id }}/reviews/{{ item.id }}/approve"><button class="btn primary small" type="submit" {% if not access.allowed %}disabled{% endif %}>Одобрить</button></form>
+    {% elif item.state == "approved" %}
+      <form method="post" action="/app/shops/{{ item.shop_id }}/reviews/{{ item.id }}/publish"><button class="btn primary small" type="submit" {% if not access.allowed %}disabled{% endif %}>Опубликовать в WB</button></form>
+    {% endif %}
+    {% if item.state in ["new", "generated", "approved", "failed"] %}
+      <form method="post" action="/app/shops/{{ item.shop_id }}/reviews/{{ item.id }}/skip"><button class="btn small ghost" type="submit">Пропустить</button></form>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

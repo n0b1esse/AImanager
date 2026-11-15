@@ -5,9 +5,11 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from wb_web import __version__
@@ -18,6 +20,8 @@ from wb_web.core.logging import configure_logging
 from wb_web.db.base import get_engine
 from wb_web.reviews.routes import router as reviews_router
 from wb_web.shops.routes import router as shops_router
+from wb_web.web.routes import WebRedirect
+from wb_web.web.routes import router as web_router
 
 logger = logging.getLogger("wb_web.request")
 
@@ -35,6 +39,12 @@ def create_app() -> FastAPI:
     app.include_router(admin_router)
     app.include_router(shops_router)
     app.include_router(reviews_router)
+    app.include_router(web_router)
+    app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parent / "static")), name="static")
+
+    @app.exception_handler(WebRedirect)
+    async def _web_redirect(_request: Request, exc: WebRedirect) -> RedirectResponse:
+        return RedirectResponse(exc.url, status_code=303)
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next):

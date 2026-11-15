@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Подписка — AImanager{% endblock %}
+{% block content %}
+<h1>Подписка</h1>
+
+<div class="panel">
+  <h3>Текущий тариф</h3>
+  <p><span class="badge">{{ access.state }}</span> · план <b>{{ subscription.plan if subscription else "—" }}</b>{% if subscription and subscription.current_period_end %} · до {{ subscription.current_period_end.strftime("%d.%m.%Y") }}{% endif %}</p>
+  {% if access.reason %}<p class="muted small">Причина: {{ access.reason }}</p>{% endif %}
+</div>
+
+<div class="panel">
+  <h3>Как оплатить</h3>
+  <p>На текущем этапе оплата проходит <b>по реквизитам</b>: перевод по QR/счёту, оператор активирует подписку вручную (обычно в течение рабочего дня). Автоплатежи банка подключим после выбора эквайринга.</p>
+  <ol>
+    <li>Выберите план: <b>Starter</b> (1 магазин, 300 отзывов/мес) · <b>Pro</b> (3 магазина, 1500 отзывов/мес) · <b>Business</b> (10 магазинов, 5000 отзывов/мес, кастомный нишевой пак).</li>
+    <li>Напишите нам на <b>pay@example.com</b> с вашим email регистрации и желаемым планом — вышлем реквизиты.</li>
+    <li>После поступления оператор активирует подписку; вы увидите статус «active» на этой странице.</li>
+  </ol>
+  <p class="muted small">7 дней триала предоставляются сразу после регистрации. После окончания сервис работает в режиме чтения 30 дней, данные не теряются.</p>
+</div>
+
+<div class="panel">
+  <h3>Ваши действия</h3>
+  <form method="post" action="/app/billing/request">
+    <label for="plan">Запросить счёт / продление</label>
+    <select id="plan" name="plan">
+      <option value="starter">Starter</option>
+      <option value="pro">Pro</option>
+      <option value="business">Business</option>
+    </select>
+    <div class="form-foot"><button class="btn primary" type="submit">Отправить запрос</button></div>
+  </form>
+</div>
+{% endblock %}
