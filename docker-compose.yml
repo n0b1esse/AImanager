@@ -1,0 +1,36 @@
+# Production-ish stack: app + Postgres. HTTPS/TLS termination is done by Caddy/Nginx in front
+# (see docs/DEPLOY_VPS.md); this file is the base for one VPS.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: wbweb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: wbweb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wbweb -d wbweb"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://wbweb:${POSTGRES_PASSWORD}@db:5432/wbweb
+      APP_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    command: >
+      sh -c "alembic upgrade head && uvicorn wb_web.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  pgdata:
