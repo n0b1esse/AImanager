@@ -104,3 +104,16 @@ class Review(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, server_default=func.now())
 
     shop: Mapped[Shop] = relationship(back_populates="reviews")
+
+
+class AdminAuditLog(Base):
+    __tablename__ = "admin_audit_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # For v1 (env-gated owner-only admin) this is the acting admin user id.
+    actor_admin_id: Mapped[int] = mapped_column(Integer, index=True)
+    action: Mapped[str] = mapped_column(String(64), index=True)
+    target: Mapped[str | None] = mapped_column(String(200))
+    detail: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    ip: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, server_default=func.now())
