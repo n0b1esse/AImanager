@@ -13,6 +13,7 @@ os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_TMP / 'test.db'}"
 os.environ["FERNET_KEY"] = Fernet.generate_key().decode()
 os.environ["SESSION_SECRET"] = "test-secret-key-material-32-bytes!!"
 os.environ["OWNER_EMAILS"] = "owner@example.com"
+os.environ["ADMIN_SUPPORT_EMAILS"] = "support@example.com"
 
 import pytest  # noqa: E402
 

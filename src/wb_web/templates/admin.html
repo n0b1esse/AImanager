@@ -22,7 +22,7 @@
 <div class="panel">
   <h3>Пользователи</h3>
   <table class="table">
-    <thead><tr><th>ID</th><th>Email</th><th>План</th><th>Статус</th><th>Период до</th><th>Действия</th></tr></thead>
+    <thead><tr><th>ID</th><th>Email</th><th>План</th><th>Статус</th><th>Период до</th><th>Действия{% if admin_role != 'owner' %} <span class="badge">read-only</span>{% endif %}</th></tr></thead>
     <tbody>
       {% for row in rows %}
       <tr>
@@ -32,6 +32,7 @@
         <td>{{ row.subscription.status if row.subscription else "—" }}</td>
         <td class="small">{{ row.subscription.current_period_end[:10] if row.subscription and row.subscription.current_period_end else "—" }}</td>
         <td>
+          {% if admin_role == 'owner' %}
           <form method="post" action="/app/admin/users/{{ row.id }}/activate" class="row" style="gap:6px">
             <select name="plan">
               {% for p in ["starter", "pro", "business"] %}<option value="{{ p }}" {% if row.subscription and row.subscription.plan == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
@@ -43,6 +44,9 @@
             <input type="hidden" name="active" value="{{ 'false' if row.is_active else 'true' }}">
             <button class="btn small {{ 'danger' if row.is_active else '' }}" type="submit">{{ 'Деактивировать' if row.is_active else 'Включить' }}</button>
           </form>
+          {% else %}
+          <span class="muted small">read-only</span>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}

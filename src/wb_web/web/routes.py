@@ -6,11 +6,14 @@ the HTML merely reflects state. Errors land on the next page as ?msg=…&kind=�
 
 from __future__ import annotations
 
+import io
 import logging
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote
 
+import qrcode
+import qrcode.image.svg
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -18,8 +21,16 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from wb_web import __version__
+from wb_web.admin import totp as admin_totp
 from wb_web.admin.audit import record_admin_action
-from wb_web.admin.deps import owner_emails
+from wb_web.admin.deps import (
+    ADMIN_2FA_COOKIE,
+    ADMIN_2FA_TTL_SECONDS,
+    admin_2fa_cookie_valid,
+    get_or_create_admin_user,
+    owner_emails,
+    role_for_email,
+)
 from wb_web.ai.generate import AIRequestError, DailyLimitExceeded, generate_for_review
 from wb_web.auth.deps import get_optional_user
 from wb_web.auth.service import request_magic_link
@@ -28,6 +39,7 @@ from wb_web.billing.activate import activate_subscription
 from wb_web.core.config import get_settings
 from wb_web.core.events import track
 from wb_web.core.security import SecretEncryptor, mask_secret
+from wb_web.core.session import sign_session
 from wb_web.db.base import get_session
 from wb_web.db.models import AdminAuditLog, Review, Shop, Subscription, User
 from wb_web.niches import load_packs
@@ -82,6 +94,7 @@ async def _ctx(request: Request, session: SessionDep, **kwargs):
         "user": user,
         "access": access,
         "is_owner": user.email.lower() in owner_emails(),
+        "is_admin": role_for_email(user.email) is not None,
         "flash": request.query_params.get("msg"),
         "flash_kind": request.query_params.get("kind", "ok"),
         "version": __version__,
@@ -92,6 +105,44 @@ async def _ctx(request: Request, session: SessionDep, **kwargs):
 def _require_access(access) -> None:
     if not access.allowed:
         raise WebRedirect("/app/billing?msg=subscription_required&kind=warn")
+
+
+def _qr_svg(data: str) -> str:
+    factory = qrcode.image.svg.SvgPathImage
+    img = qrcode.make(data, image_factory=factory, box_size=8, border=2)
+    buffer = io.BytesIO()
+    img.save(buffer)
+    return buffer.getvalue().decode()
+
+
+def _set_admin_2fa_cookie(response: RedirectResponse, admin_id: int) -> None:
+    settings = get_settings()
+    token = sign_session(
+        {"adm": admin_id, "purpose": "admin2fa"},
+        settings.session_secret,
+        ADMIN_2FA_TTL_SECONDS,
+    )
+    response.set_cookie(
+        ADMIN_2FA_COOKIE,
+        token,
+        httponly=True,
+        samesite="lax",
+        secure=settings.app_env == "production",
+        max_age=ADMIN_2FA_TTL_SECONDS,
+        path="/",
+    )
+
+
+async def _admin_guard(request: Request, session: AsyncSession):
+    user = await _web_user(request, session)
+    admin = await get_or_create_admin_user(session, user.email)
+    if admin is None:
+        raise WebRedirect(f"/app?msg={quote('Недостаточно прав')}&kind=err")
+    if not admin.totp_enabled:
+        raise WebRedirect("/app/admin/setup")
+    if not admin_2fa_cookie_valid(request, admin):
+        raise WebRedirect("/app/admin/2fa")
+    return user, admin
 
 
 # ---------- public ----------
@@ -509,11 +560,94 @@ async def billing_request(request: Request, session: SessionDep, plan: Annotated
     return _with_msg("/app/billing", "Запрос отправлен. Оператор свяжется с вами по email.")
 
 
+@router.get("/app/admin/setup")
+async def admin_setup_page(request: Request, session: SessionDep):
+    user = await _web_user(request, session)
+    admin = await get_or_create_admin_user(session, user.email)
+    if admin is None:
+        return _with_msg("/app", "Недостаточно прав", "err")
+    if admin.totp_enabled:
+        return _redirect("/app/admin")
+    if not admin.totp_secret_encrypted:
+        secret = admin_totp.new_secret()
+        admin.totp_secret_encrypted = admin_totp.encrypt_secret(secret)
+        await session.commit()
+    secret = admin_totp.decrypt_secret(admin.totp_secret_encrypted)
+    uri = admin_totp.otpauth_uri(user.email, secret)
+    ctx = await _ctx(request, session)
+    ctx[2].update({"secret": secret, "qr_svg": _qr_svg(uri), "otpauth_uri": uri, "role": admin.role})
+    return templates.TemplateResponse(request, "admin_setup.html", ctx[2])
+
+
+@router.post("/app/admin/setup")
+async def admin_setup_confirm(
+    request: Request,
+    session: SessionDep,
+    code: Annotated[str, Form()] = "",
+):
+    user = await _web_user(request, session)
+    admin = await get_or_create_admin_user(session, user.email)
+    if admin is None:
+        return _with_msg("/app", "Недостаточно прав", "err")
+    if admin.totp_enabled:
+        return _redirect("/app/admin")
+    if not admin.totp_secret_encrypted:
+        return _with_msg("/app/admin/setup", "Секрет не создан, обновите страницу", "err")
+    secret = admin_totp.decrypt_secret(admin.totp_secret_encrypted)
+    if not admin_totp.verify(secret, code):
+        return _with_msg("/app/admin/setup", "Неверный код, попробуйте ещё раз", "err")
+    admin.totp_enabled = True
+    await session.commit()
+    response = _with_msg("/app/admin", "2FA включена")
+    _set_admin_2fa_cookie(response, admin.id)
+    return response
+
+
+@router.get("/app/admin/2fa")
+async def admin_2fa_page(request: Request, session: SessionDep):
+    user = await _web_user(request, session)
+    admin = await get_or_create_admin_user(session, user.email)
+    if admin is None:
+        return _with_msg("/app", "Недостаточно прав", "err")
+    if not admin.totp_enabled:
+        return _redirect("/app/admin/setup")
+    if admin_2fa_cookie_valid(request, admin):
+        return _redirect("/app/admin")
+    ctx = await _ctx(request, session)
+    ctx[2].update({"role": admin.role})
+    return templates.TemplateResponse(request, "admin_2fa.html", ctx[2])
+
+
+@router.post("/app/admin/2fa")
+async def admin_2fa_verify(
+    request: Request,
+    session: SessionDep,
+    code: Annotated[str, Form()] = "",
+):
+    user = await _web_user(request, session)
+    admin = await get_or_create_admin_user(session, user.email)
+    if admin is None:
+        return _with_msg("/app", "Недостаточно прав", "err")
+    if not admin.totp_enabled:
+        return _redirect("/app/admin/setup")
+    secret = admin_totp.decrypt_secret(admin.totp_secret_encrypted)
+    if not admin_totp.verify(secret, code):
+        return _with_msg("/app/admin/2fa", "Неверный код", "err")
+    response = _redirect("/app/admin")
+    _set_admin_2fa_cookie(response, admin.id)
+    return response
+
+
 @router.get("/app/admin")
 async def admin_page(request: Request, session: SessionDep):
     user, access, ctx = await _ctx(request, session)
-    if user.email.lower() not in owner_emails():
+    admin = await get_or_create_admin_user(session, user.email)
+    if admin is None:
         return _with_msg("/app", "Недостаточно прав", "err")
+    if not admin.totp_enabled:
+        return _redirect("/app/admin/setup")
+    if not admin_2fa_cookie_valid(request, admin):
+        return _redirect("/app/admin/2fa")
     users_total = (await session.execute(select(func.count(User.id)))).scalar_one()
     shops_total = (await session.execute(select(func.count(Shop.id)))).scalar_one()
     plan_counts = dict(
@@ -549,6 +683,9 @@ async def admin_page(request: Request, session: SessionDep):
         await session.execute(select(AdminAuditLog).order_by(AdminAuditLog.id.desc()).limit(10))
     ).scalars().all()
     sales = await admin_sales(session)
+    admin = await get_or_create_admin_user(session, user.email)
+    if admin is not None:
+        ctx["admin_role"] = admin.role
     ctx.update(
         {
             "summary": {"users_total": users_total, "shops_total": shops_total, "plans": plan_counts},
@@ -568,9 +705,10 @@ async def admin_activate(
     plan: Annotated[str, Form()] = "starter",
     months: Annotated[int, Form()] = 1,
 ):
-    user, _access, _ = await _ctx(request, session)
-    if user.email.lower() not in owner_emails():
-        return _redirect("/app")
+    user, access, _ = await _ctx(request, session)
+    user, admin = await _admin_guard(request, session)
+    if admin.role != "owner":
+        return _with_msg("/app/admin", "Роль support: доступ только для просмотра", "err")
     try:
         await activate_subscription(
             session,
@@ -592,13 +730,13 @@ async def admin_toggle(
     user_id: int,
     active: Annotated[str, Form()] = "false",
 ):
-    user, _access, _ = await _ctx(request, session)
-    if user.email.lower() not in owner_emails():
-        return _redirect("/app")
+    user, admin = await _admin_guard(request, session)
+    if admin.role != "owner":
+        return _with_msg("/app/admin", "Роль support: доступ только для просмотра", "err")
     target = await session.get(User, user_id)
     if target is None:
         return _with_msg("/app/admin", "Пользователь не найден", "err")
-    if target.email.lower() in owner_emails():
+    if role_for_email(target.email) == "owner":
         return _with_msg("/app/admin", "Нельзя деактивировать owner", "err")
     target.is_active = str(active).lower() == "true"
     await record_admin_action(

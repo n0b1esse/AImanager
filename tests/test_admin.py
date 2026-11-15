@@ -1,4 +1,5 @@
 import pytest
+from admin_helpers import setup_admin
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -12,6 +13,7 @@ def _login(email: str) -> TestClient:
     client = TestClient(create_app())
     token = client.post("/auth/request", json={"email": email}).json()["dev_token"]
     client.post("/auth/verify", json={"token": token})
+    setup_admin(client, email, role="owner")
     return client
 
 

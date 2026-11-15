@@ -17,7 +17,7 @@
     <a href="/app/shops">Магазины</a>
     <a href="/app/billing">Подписка</a>
     <a href="/app/stats">Статистика</a>
-    {% if is_owner %}<a href="/app/admin">Админка</a>{% endif %}
+    {% if is_admin %}<a href="/app/admin">Админка</a>{% endif %}
   </nav>
   <div class="spacer"></div>
   <span class="who">{{ user.email }}</span>

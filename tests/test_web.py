@@ -2,6 +2,7 @@ import asyncio
 import re
 from datetime import UTC, datetime
 
+from admin_helpers import setup_admin
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -19,6 +20,7 @@ def _web_login(email: str) -> TestClient:
     linked = client.get(match.group(1))
     assert linked.status_code == 303
     assert linked.headers["location"] == "/app"
+    setup_admin(client, email)  # no-op for non-admin emails
     assert client.get("/app").status_code == 200
     return client
 

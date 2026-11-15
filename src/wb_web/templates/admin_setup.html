@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}2FA для админки — AImanager{% endblock %}
+{% block content %}
+<h1>Двухфакторная аутентификация</h1>
+<div class="panel">
+  <p>Роль: <span class="badge">{{ role }}</span>. Для админки обязателен код из приложения-аутентификатора (Google Authenticator, 2FAS, Яндекс Ключ…).</p>
+  <div class="grid cols-2">
+    <div>
+      <p class="muted small">1. Отсканируйте QR-код (или введите ключ вручную):</p>
+      <div style="background:#fff;border-radius:12px;padding:12px;display:inline-block">{{ qr_svg | safe }}</div>
+      <p class="muted small" style="margin-top:10px">Ключ: <code class="mono">{{ secret }}</code></p>
+    </div>
+    <div>
+      <p class="muted small">2. Введите 6-значный код из приложения:</p>
+      <form method="post" action="/app/admin/setup">
+        <label for="code">Код</label>
+        <input type="text" id="code" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" autofocus required>
+        <div class="form-foot"><button class="btn primary" type="submit">Подтвердить</button></div>
+      </form>
+      <p class="muted small">Секрет хранится зашифрованным (Fernet). Потерянный телефон = выход только через владельца с доступом к БД.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

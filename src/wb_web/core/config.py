@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     public_base_url: str = ""
     # Comma-separated emails that become admin on first login (later: DB-driven roles).
     owner_emails: str = ""
+    # Comma-separated emails that become read-only support admins
+    admin_support_emails: str = ""
     # Email backends: console (dev default) or smtp
     mail_from: str = "AImanager <no-reply@localhost>"
     smtp_host: str = ""
