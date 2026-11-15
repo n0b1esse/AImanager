@@ -1,4 +1,4 @@
-# WB Review AI — веб-SaaS
+# AImanager (WB Review AI)
 
 > Продавцы Wildberries получают AI-ответы на отзывы через свой LLM-ключ.
 > Этот репозиторий — новый веб-сервис. Десктопная версия (`../WBReviewAIManager`) — архив-референс, не развивается.
@@ -12,7 +12,7 @@
 - **LLM:** BYOK (ключ клиента). Managed-тариф — позже.
 - **Модель:** только веб, соло-разработка.
 
-Подробный план и риски — в Obsidian: `01_Projects/WBReviewAIManager/00_Дашборд.md` и в `docs/PLAN.md`.
+Подробный план и риски — в Obsidian: `01_Projects/AImanager/00_Дашборд.md` и в `docs/PLAN.md`.
 
 ## Стек
 
