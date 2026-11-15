@@ -195,4 +195,4 @@ def test_static_css_served() -> None:
     client = TestClient(create_app())
     response = client.get("/static/style.css")
     assert response.status_code == 200
-    assert "--accent" in response.text
+    assert "--brand" in response.text

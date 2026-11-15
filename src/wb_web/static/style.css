@@ -1,12 +1,19 @@
 :root {
-  --bg: #14161b;
-  --panel: #1d2027;
-  --panel-2: #232732;
-  --border: #2c303b;
+  --bg: #101318;
+  --panel: #1a1e26;
+  --panel-2: #21252f;
+  --border: #2b2f3a;
   --text: #e8eaee;
-  --muted: #9aa1ad;
-  --accent: #cb11f5;
-  --accent-2: #a73afd;
+  --muted: #98a0ad;
+  /* AImanager primary brand — нефритовый teal */
+  --brand: #14b8a6;
+  --brand-2: #2dd4bf;
+  --brand-deep: #0d9488;
+  /* маркетплейс-акценты — только для WB/Ozon */
+  --wb: #cb11f5;
+  --wb-2: #14b8a6;
+  --ozon: #005bff;
+  --ozon-2: #3d7dff;
   --success: #3dd68c;
   --warn: #ffb020;
   --danger: #ff5d5d;
@@ -22,7 +29,7 @@ body {
   font: 15px/1.5 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-a { color: var(--accent); text-decoration: none; }
+a { color: var(--brand); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 .container { max-width: 1080px; margin: 0 auto; padding: 24px 20px 64px; }
@@ -36,7 +43,7 @@ a:hover { text-decoration: underline; }
 }
 .logo {
   font-weight: 800; font-size: 17px; letter-spacing: .2px; color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: linear-gradient(135deg, var(--brand), var(--brand-deep));
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }
 .topbar nav { display: flex; gap: 16px; margin-left: 8px; flex-wrap: wrap; }
@@ -68,7 +75,7 @@ input[type=email], input[type=text], input[type=password], input[type=number], s
   border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
   font: inherit; resize: vertical;
 }
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-2); border-color: transparent; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand-2); border-color: transparent; }
 
 .btn {
   display: inline-block; padding: 9px 16px; border-radius: 10px; border: 0;
@@ -76,7 +83,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-2); 
   font: 600 14px/1.2 inherit; text-align: center; user-select: none;
 }
 .btn:hover { background: #2b303c; text-decoration: none; }
-.btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
+.btn.primary { background: linear-gradient(135deg, var(--brand), var(--brand-deep)); color: #fff; }
 .btn.danger { background: #3a2328; color: #ffb3b3; }
 .btn.ghost { background: transparent; border: 1px solid var(--border); }
 .btn.small { padding: 6px 12px; font-size: 13px; }
@@ -86,7 +93,7 @@ button.btn { border: 0; }
 .form-foot { margin-top: 16px; }
 
 .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); }
-.badge.new { color: #8ecbff; border-color: #25425e; background: #16222f; }
+.badge.new { color: #7ef0dd; border-color: rgba(20,184,166,.45); background: rgba(20,184,166,.10); }
 .badge.generated { color: #ffd98a; border-color: #57482a; background: #2b2415; }
 .badge.approved, .badge.published { color: #8af0ba; border-color: #1f4d33; background: #152a1e; }
 .badge.skipped, .badge.failed { color: #ffb3b3; border-color: #572b2b; background: #2b1818; }
@@ -112,6 +119,11 @@ code { background: var(--panel-2); padding: 1px 6px; border-radius: 6px; font-si
 .review-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; background: var(--panel-2); }
 .review-card .head { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .review-text { white-space: pre-wrap; }
-.review-gen { white-space: pre-wrap; border-left: 3px solid var(--accent-2); padding-left: 12px; margin: 10px 0; color: #f3ecff; }
+.review-gen { white-space: pre-wrap; border-left: 3px solid var(--brand-2); padding-left: 12px; margin: 10px 0; color: #f3ecff; }
 
 .login-box { max-width: 420px; margin: 64px auto; }
+
+
+/* ===== marketplace акценты ===== */
+.badge-wb { color: #e0a4ff; border-color: rgba(203,17,245,.45) !important; background: rgba(203,17,245,.12) !important; }
+.badge-ozon { color: #8ab8ff; border-color: rgba(0,91,255,.45) !important; background: rgba(0,91,255,.14) !important; }

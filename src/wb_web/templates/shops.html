@@ -10,7 +10,7 @@
 <div class="panel">
   <div class="row" style="justify-content:space-between;align-items:flex-start">
     <div>
-      <h3 style="margin-bottom:4px">{{ shop.name }} {% if shop.marketplace == 'ozon' %}<span class="badge">Ozon</span>{% else %}<span class="badge">Wildberries</span>{% endif %}</h3>
+      <h3 style="margin-bottom:4px">{{ shop.name }} {% if shop.marketplace == 'ozon' %}<span class="badge badge-ozon">Ozon</span>{% else %}<span class="badge badge-wb">Wildberries</span>{% endif %}</h3>
       <div class="muted small">{% if shop.marketplace == 'ozon' %}Client-Id: <span class="mono">{{ masks.get(shop.id, {}).get('client_id') }}</span> · Api-Key: <span class="mono">{{ masks.get(shop.id, {}).get('api_key') }}</span>{% else %}WB-токен: <span class="mono">{{ masks.get(shop.id, {}).get('wb') }}</span>{% endif %}{% if shop.wb_seller_name %} · <span class="badge">{{ shop.wb_seller_name }}</span>{% endif %}</div>
       <div class="small" style="margin-top:6px">Ниши:
         {% if shop.niche_ids %}{{ shop.niche_ids | join(", ") }}{% else %}<span class="muted">не выбраны (универсальный пак)</span>{% endif %}
