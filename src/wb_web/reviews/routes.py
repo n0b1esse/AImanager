@@ -13,7 +13,6 @@ from wb_web.billing.access import ActiveAccess
 from wb_web.db.models import Review, Shop
 from wb_web.queue import publish_review
 from wb_web.wb.adapter import WBReviewsAdapter
-from wb_web.wb.client import WildberriesClient
 from wb_web.wb.errors import (
     WildberriesAuthenticationError,
     WildberriesError,
@@ -125,15 +124,25 @@ async def publish_reply(shop: CurrentShop, review_id: int, session: SessionDep, 
     review = await _get_review(session, shop, review_id)
     if review.state != "approved":
         raise HTTPException(status_code=409, detail=f"publish requires state 'approved', got '{review.state}'")
-    client: WildberriesClient = build_client_for_shop(shop)
+    if shop.marketplace == "ozon":
+        from wb_web.ozon.adapter import OzonReviewsAdapter
+        from wb_web.ozon.client import OzonClient
+
+        client = OzonClient.from_shop(shop)
+        adapter = OzonReviewsAdapter(client)
+    else:
+        client = build_client_for_shop(shop)
+        adapter = WBReviewsAdapter(client)
     try:
-        result = await publish_review(session, review, WBReviewsAdapter(client))
+        result = await publish_review(session, review, adapter)
     except WildberriesAuthenticationError as exc:
         raise HTTPException(status_code=400, detail="WB token is invalid or expired") from exc
     except WildberriesRateLimitError as exc:
         raise HTTPException(status_code=429, detail={"error": "wb_rate_limit", "retry_after": getattr(exc, "retry_after", None)}) from exc
     except WildberriesError as exc:
-        raise HTTPException(status_code=502, detail="Wildberries API request failed") from exc
+        raise HTTPException(status_code=502, detail="Marketplace API request failed") from exc
+    except Exception as exc:  # ozon client errors; message contains no secrets
+        raise HTTPException(status_code=502, detail=f"Marketplace API request failed: {exc.__class__.__name__}") from exc
     finally:
         await client.aclose()
     return {"ok": True, "outcome": result.outcome, "state": review.state}

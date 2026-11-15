@@ -229,15 +229,23 @@ async def shops_page(request: Request, session: SessionDep):
     shops = (
         await session.execute(select(Shop).where(Shop.owner_id == user.id).order_by(Shop.id))
     ).scalars().all()
-    token_masks = {}
+    encryptor = SecretEncryptor.from_settings()
+    masks = {}
     for shop in shops:
-        try:
-            token_masks[shop.id] = mask_secret(
-                SecretEncryptor.from_settings().decrypt(shop.wb_token_encrypted)
-            )
-        except ValueError:
-            token_masks[shop.id] = "••••unreadable"
-    ctx.update({"shops": shops, "niches": load_packs(), "token_masks": token_masks})
+        entry = {}
+        if shop.marketplace == "ozon":
+            entry["client_id"] = (shop.ozon_client_id[:2] + "…" + shop.ozon_client_id[-2:]) if shop.ozon_client_id else "—"
+            try:
+                entry["api_key"] = mask_secret(encryptor.decrypt(shop.ozon_api_key_encrypted)) if shop.ozon_api_key_encrypted else "••••"
+            except ValueError:
+                entry["api_key"] = "••••unreadable"
+        else:
+            try:
+                entry["wb"] = mask_secret(encryptor.decrypt(shop.wb_token_encrypted))
+            except ValueError:
+                entry["wb"] = "••••unreadable"
+        masks[shop.id] = entry
+    ctx.update({"shops": shops, "niches": load_packs(), "masks": masks})
     return templates.TemplateResponse(request, "shops.html", ctx)
 
 
@@ -246,27 +254,49 @@ async def shops_create(
     request: Request,
     session: SessionDep,
     name: Annotated[str, Form()],
-    wb_token: Annotated[str, Form()],
+    wb_token: Annotated[str, Form()] = "",
     niche_ids: Annotated[list[str] | None, Form()] = None,
+    marketplace: Annotated[str, Form()] = "wb",
+    ozon_client_id: Annotated[str, Form()] = "",
+    ozon_api_key: Annotated[str, Form()] = "",
 ):
     user, access, _ = await _ctx(request, session)
     _require_access(access)
     niche_ids = niche_ids or []
     name = name.strip()
-    wb_token = wb_token.strip()
-    if not name or len(wb_token) < 8:
-        return _with_msg("/app/shops", "Название пустое или токен короче 8 символов", "err")
+    marketplace = marketplace if marketplace in {"wb", "ozon"} else "wb"
     available = set(load_packs())
     unknown = [n for n in niche_ids if n not in available]
     if unknown:
         return _with_msg("/app/shops", f"Неизвестные ниши: {', '.join(unknown)}", "err")
-    shop = Shop(
-        owner_id=user.id,
-        name=name,
-        wb_token_encrypted=SecretEncryptor.from_settings().encrypt(wb_token),
-        niche_ids=niche_ids,
-        mode="manual",
-    )
+    encryptor = SecretEncryptor.from_settings()
+    if marketplace == "ozon":
+        client_id = ozon_client_id.strip()
+        api_key = ozon_api_key.strip()
+        if len(client_id) < 3 or len(api_key) < 8:
+            return _with_msg("/app/shops", "Ozon: укажите Client-Id и Api-Key (>= 8 символов)", "err")
+        shop = Shop(
+            owner_id=user.id,
+            name=name,
+            marketplace="ozon",
+            wb_token_encrypted="",
+            ozon_client_id=client_id,
+            ozon_api_key_encrypted=encryptor.encrypt(api_key),
+            niche_ids=niche_ids,
+            mode="manual",
+        )
+    else:
+        wb_token = wb_token.strip()
+        if not name or len(wb_token) < 8:
+            return _with_msg("/app/shops", "Название пустое или токен короче 8 символов", "err")
+        shop = Shop(
+            owner_id=user.id,
+            name=name,
+            marketplace="wb",
+            wb_token_encrypted=encryptor.encrypt(wb_token),
+            niche_ids=niche_ids,
+            mode="manual",
+        )
     session.add(shop)
     await session.commit()
     await track(session, event="shop.create", user_id=user.id, shop_id=shop.id)
@@ -287,12 +317,18 @@ async def shop_verify(request: Request, session: SessionDep, shop_id: int):
     if shop is None:
         return _with_msg("/app/shops", "Магазин не найден", "err")
     try:
-        result = await verify_shop_connection(shop)
-        shop.wb_seller_name = result.get("seller_name")
-        await session.commit()
+        if shop.marketplace == "ozon":
+            from wb_web.ozon.sync import verify_ozon_connection
+
+            result = await verify_ozon_connection(shop)
+        else:
+            result = await verify_shop_connection(shop)
+        if result.get("seller_name"):
+            shop.wb_seller_name = result["seller_name"]
+            await session.commit()
         return _with_msg("/app/shops", f"Подключение работает: {result.get('display_name')}")
     except Exception as exc:  # noqa: BLE001 — operator-safe message only
-        return _with_msg("/app/shops", f"WB недоступен: {exc.__class__.__name__}", "err")
+        return _with_msg("/app/shops", f"Маркетплейс недоступен: {exc.__class__.__name__}", "err")
 
 
 @router.post("/app/shops/{shop_id}/sync")
@@ -303,7 +339,12 @@ async def shop_sync(request: Request, session: SessionDep, shop_id: int):
     if shop is None:
         return _with_msg("/app/shops", "Магазин не найден", "err")
     try:
-        result = await sync_shop_reviews(session, shop)
+        if shop.marketplace == "ozon":
+            from wb_web.ozon.sync import sync_ozon_reviews
+
+            result = await sync_ozon_reviews(session, shop)
+        else:
+            result = await sync_shop_reviews(session, shop)
         return _with_msg(
             "/app/shops",
             f"Синхронизировано: получено {result.fetched}, новых {result.created}, обновлено {result.updated}",

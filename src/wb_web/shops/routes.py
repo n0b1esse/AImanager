@@ -28,23 +28,30 @@ router = APIRouter(prefix="/shops", tags=["shops"])
 
 class CreateShopBody(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    wb_token: str = Field(min_length=8, max_length=4000)
+    marketplace: Literal["wb", "ozon"] = "wb"
+    wb_token: str = Field(default="", max_length=4000)
+    ozon_client_id: str = Field(default="", max_length=64)
+    ozon_api_key: str = Field(default="", max_length=4000)
     niche_ids: list[str] = Field(default_factory=list)
 
 
-def _mask_wb_token(ciphertext: str) -> str:
-    try:
-        return mask_secret(SecretEncryptor.from_settings().decrypt(ciphertext))
-    except ValueError:
-        return "••••unreadable"
-
-
 def _public(shop: Shop) -> dict:
+    def _mask(encrypted: str) -> str | None:
+        if not encrypted:
+            return None
+        try:
+            return mask_secret(SecretEncryptor.from_settings().decrypt(encrypted))
+        except ValueError:
+            return "••••unreadable"
+
     return {
         "id": shop.id,
         "name": shop.name,
+        "marketplace": shop.marketplace,
         "wb_seller_name": shop.wb_seller_name,
-        "wb_token_masked": _mask_wb_token(shop.wb_token_encrypted),
+        "wb_token_masked": _mask(shop.wb_token_encrypted),
+        "ozon_client_id_masked": (shop.ozon_client_id[:2] + "…" + shop.ozon_client_id[-2:]) if shop.ozon_client_id else None,
+        "ozon_api_key_masked": _mask(shop.ozon_api_key_encrypted),
         "niche_ids": shop.niche_ids,
         "mode": shop.mode,
         "automation_paused": shop.automation_paused,
@@ -56,7 +63,6 @@ def _public(shop: Shop) -> dict:
 @router.post("", status_code=201)
 async def create_shop(body: CreateShopBody, user: CurrentUser, session: SessionDep, _access: ActiveAccess) -> dict:
     name = body.name.strip()
-    wb_token = body.wb_token.strip()
     available = set(load_packs())
     unknown = [nid for nid in body.niche_ids if nid not in available]
     if unknown:
@@ -65,13 +71,33 @@ async def create_shop(body: CreateShopBody, user: CurrentUser, session: SessionD
             detail=f"unknown niche_ids: {unknown}. available: {sorted(available)}",
         )
     encryptor = SecretEncryptor.from_settings()
-    shop = Shop(
-        owner_id=user.id,
-        name=name,
-        wb_token_encrypted=encryptor.encrypt(wb_token),
-        niche_ids=body.niche_ids,
-        mode="manual",
-    )
+    if body.marketplace == "ozon":
+        client_id = body.ozon_client_id.strip()
+        api_key = body.ozon_api_key.strip()
+        if len(client_id) < 3 or len(api_key) < 8:
+            raise HTTPException(status_code=400, detail="ozon: Client-Id (>=3 символов) и Api-Key (>=8) обязательны")
+        shop = Shop(
+            owner_id=user.id,
+            name=name,
+            marketplace="ozon",
+            wb_token_encrypted="",
+            ozon_client_id=client_id,
+            ozon_api_key_encrypted=encryptor.encrypt(api_key),
+            niche_ids=body.niche_ids,
+            mode="manual",
+        )
+    else:
+        wb_token = body.wb_token.strip()
+        if len(wb_token) < 8:
+            raise HTTPException(status_code=400, detail="wb: token (>=8 символов) обязателен")
+        shop = Shop(
+            owner_id=user.id,
+            name=name,
+            marketplace="wb",
+            wb_token_encrypted=encryptor.encrypt(wb_token),
+            niche_ids=body.niche_ids,
+            mode="manual",
+        )
     session.add(shop)
     await session.commit()
     await session.refresh(shop)
@@ -99,9 +125,16 @@ def _wb_http_error(exc: WildberriesError) -> HTTPException:
 @router.post("/{shop_id}/verify")
 async def verify_shop(shop: CurrentShop, session: SessionDep, _access: ActiveAccess) -> dict:
     try:
-        result = await verify_shop_connection(shop)
+        if shop.marketplace == "ozon":
+            from wb_web.ozon.sync import verify_ozon_connection
+
+            result = await verify_ozon_connection(shop)
+        else:
+            result = await verify_shop_connection(shop)
     except WildberriesError as exc:
         raise _wb_http_error(exc) from exc
+    except Exception as exc:  # ozon client errors
+        raise HTTPException(status_code=502, detail=f"Marketplace API error: {exc.__class__.__name__}") from exc
     if result.get("seller_name"):
         shop.wb_seller_name = result["seller_name"]
         await session.commit()
@@ -111,9 +144,16 @@ async def verify_shop(shop: CurrentShop, session: SessionDep, _access: ActiveAcc
 @router.post("/{shop_id}/sync")
 async def sync_shop(shop: CurrentShop, session: SessionDep, _access: ActiveAccess) -> dict:
     try:
-        result = await sync_shop_reviews(session, shop)
+        if shop.marketplace == "ozon":
+            from wb_web.ozon.sync import sync_ozon_reviews
+
+            result = await sync_ozon_reviews(session, shop)
+        else:
+            result = await sync_shop_reviews(session, shop)
     except WildberriesError as exc:
         raise _wb_http_error(exc) from exc
+    except Exception as exc:  # ozon client errors
+        raise HTTPException(status_code=502, detail=f"Marketplace API error: {exc.__class__.__name__}") from exc
     return {"fetched": result.fetched, "created": result.created, "updated": result.updated}
 
 

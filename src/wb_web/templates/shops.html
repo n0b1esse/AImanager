@@ -10,8 +10,8 @@
 <div class="panel">
   <div class="row" style="justify-content:space-between;align-items:flex-start">
     <div>
-      <h3 style="margin-bottom:4px">{{ shop.name }}</h3>
-      <div class="muted small">WB-токен: <span class="mono">{{ token_masks.get(shop.id) }}</span>{% if shop.wb_seller_name %} · <span class="badge">{{ shop.wb_seller_name }}</span>{% endif %}</div>
+      <h3 style="margin-bottom:4px">{{ shop.name }} {% if shop.marketplace == 'ozon' %}<span class="badge">Ozon</span>{% else %}<span class="badge">Wildberries</span>{% endif %}</h3>
+      <div class="muted small">{% if shop.marketplace == 'ozon' %}Client-Id: <span class="mono">{{ masks.get(shop.id, {}).get('client_id') }}</span> · Api-Key: <span class="mono">{{ masks.get(shop.id, {}).get('api_key') }}</span>{% else %}WB-токен: <span class="mono">{{ masks.get(shop.id, {}).get('wb') }}</span>{% endif %}{% if shop.wb_seller_name %} · <span class="badge">{{ shop.wb_seller_name }}</span>{% endif %}</div>
       <div class="small" style="margin-top:6px">Ниши:
         {% if shop.niche_ids %}{{ shop.niche_ids | join(", ") }}{% else %}<span class="muted">не выбраны (универсальный пак)</span>{% endif %}
         · режим: <b>{{ {'manual':'ручной','semi':'полуавто','auto':'авто'}[shop.mode] if shop.mode in ['manual','semi','auto'] else shop.mode }}</b>
@@ -39,10 +39,22 @@
   <h3>Подключить магазин</h3>
   <form method="post" action="/app/shops">
     <label for="name">Название (как вы его видите)</label>
-    <input type="text" id="name" name="name" required maxlength="200" placeholder="Мой магазин на WB">
+    <input type="text" id="name" name="name" required maxlength="200" placeholder="Мой магазин">
+
+    <label for="marketplace">Маркетплейс</label>
+    <select id="marketplace" name="marketplace">
+      <option value="wb" selected>Wildberries</option>
+      <option value="ozon">Ozon</option>
+    </select>
 
     <label for="wb_token">WB API-токен <span class="muted">(категория «Вопросы и отзывы»; хранится зашифрованно)</span></label>
-    <input type="text" id="wb_token" name="wb_token" required minlength="8" placeholder="ey..." autocomplete="off">
+    <input type="text" id="wb_token" name="wb_token" minlength="0" placeholder="ey... — только для Wildberries" autocomplete="off">
+
+    <label for="ozon_client_id">Ozon Client-Id <span class="muted">(только для Ozon; ключ с правом на «Управление отзывами»)</span></label>
+    <input type="text" id="ozon_client_id" name="ozon_client_id" placeholder="например, 123456 — только для Ozon" autocomplete="off">
+
+    <label for="ozon_api_key">Ozon Api-Key <span class="muted">(только для Ozon; хранится зашифрованно)</span></label>
+    <input type="text" id="ozon_api_key" name="ozon_api_key" placeholder="xxxxxxxxxxxx" autocomplete="off">
 
     <label>Ниши (необязательно, можно пропустить — будет универсальный пак)</label>
     <div class="row">

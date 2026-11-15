@@ -72,6 +72,9 @@ class Shop(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
     automation_paused: Mapped[bool] = mapped_column(default=False)  # kill switch from admin
     wb_sandbox: Mapped[bool] = mapped_column(default=False)  # use WB sandbox endpoints (test reviews)
+    marketplace: Mapped[str] = mapped_column(String(8), default="wb")  # wb | ozon
+    ozon_client_id: Mapped[str] = mapped_column(String(64), default="")  # Client-Id (semi-public)
+    ozon_api_key_encrypted: Mapped[str] = mapped_column(Text, default="")  # Api-Key, Fernet
     # BYOK AI configuration (api key stored as Fernet ciphertext, never returned by API)
     ai_provider: Mapped[str] = mapped_column(String(32), default="openai")  # openai | openai_compatible | ollama
     ai_model: Mapped[str] = mapped_column(String(120), default="")
