@@ -55,11 +55,17 @@ async def request_magic_link(session: AsyncSession, email: str) -> str:
     )
     await session.commit()
 
-    link = f"/auth/verify?token={raw_token}"
-    if settings.app_env == "production":
-        logger.info("magic link issued for user_id=%s", user.id)
-    else:
-        # Without an SMTP integration, dev links must be visible in the console.
+    base = settings.public_base_url.rstrip("/") if settings.public_base_url else ""
+    link = f"{base}/auth/link?token={raw_token}" if base else f"/auth/link?token={raw_token}"
+    if settings.smtp_host or base:
+        from wb_web.core.mailer import send_magic_link
+
+        try:
+            await send_magic_link(to=email, link=link, ttl_minutes=settings.magic_link_ttl_minutes)
+        except Exception:  # noqa: BLE001 — the request must not leak mail infra state
+            logger.error("failed to deliver magic link", extra={"action": "mail_send"})
+    if settings.app_env != "production":
+        # Without a public URL/SMTP, dev links must be visible in the console.
         logger.warning("DEV magic link for %s: %s", email, link)
     return raw_token
 
