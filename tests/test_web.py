@@ -56,7 +56,7 @@ def test_login_page_renders() -> None:
     client = TestClient(create_app())
     response = client.get("/login")
     assert response.status_code == 200
-    assert "Авто-Отвеччик" in response.text
+    assert "Авто-ответчик" in response.text
 
 
 def test_login_with_selected_plan_persists_it() -> None:

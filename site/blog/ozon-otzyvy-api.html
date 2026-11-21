@@ -4,12 +4,12 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Ozon Seller API для отзывов: Client-Id и Api-Key, /v2/review/list, /v1/review/comment/create, подписка «Управление отзывами». Что умеет и чего стоит избегать.">
 <link rel="canonical" href="https://avto-otvetchik.com/blog/ozon-otzyvy-api">
-<title>Ozon Seller API для отзывов: что умеет — Авто-Отвеччик</title>
+<title>Ozon Seller API для отзывов: что умеет — Авто-ответчик</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2314b8a6'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>A</text></svg>">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<header class="nav"><div class="wrap nav-inner"><a class="logo" href="/">Авто-Отвеччик</a><button class="hamburger" id="hamburger" aria-label="Меню" aria-expanded="false" aria-controls="navpanel"><span></span><span></span><span></span></button>
+<header class="nav"><div class="wrap nav-inner"><a class="logo" href="/">Авто-ответчик</a><button class="hamburger" id="hamburger" aria-label="Меню" aria-expanded="false" aria-controls="navpanel"><span></span><span></span><span></span></button>
   <div class="nav-panel" id="navpanel" hidden>
     <a href="/wildberries">Для Wildberries</a>
     <a href="/ozon">Для Ozon</a>
@@ -21,9 +21,9 @@
   </div><a class="btn btn-sm btn-primary" href="/#waitlist">Ранний доступ</a></div></header>
 
 <section class="page-hero"><div class="wrap">
-  <div class="breadcrumb"><a href="/">Авто-Отвеччик</a> → <a href="/blog/avtootvety-wildberries">Блог</a> → Ozon API</div>
+  <div class="breadcrumb"><a href="/">Авто-ответчик</a> → <a href="/blog/avtootvety-wildberries">Блог</a> → Ozon API</div>
   <h1>Ozon Seller API для отзывов: что умеет и как подключить</h1>
-  <p class="muted">8 минут · Команда Авто-Отвеччик</p>
+  <p class="muted">8 минут · Команда Авто-ответчик</p>
 </div></section>
 
 <section class="section" style="padding-top:10px"><div class="wrap article">
@@ -49,10 +49,10 @@
   <h2>Чего избегать при интеграции</h2>
   <ul><li>Наивный retry при сетевом сбое: отправили ответ, потеряли подтверждение — и отправили второй. Всегда сначала <code>comment/list</code> и проверка наличия вашего комментария.</li><li>Отвечать на отзывы со статусом не-NEW или с <code>comments_amount &gt; 0</code> от владельца.</li><li>Хранить ключ в открытом виде: шифруйте тем же способом, что и токены WB.</li></ul>
 
-  <h2>Что делает Авто-Отвеччик</h2>
+  <h2>Что делает Авто-ответчик</h2>
   <p>Ровно этими методами мы забираем новые отзывы, пишем ответы вашим ИИ и публикуем их после вашего апрува. Детали — <a href="/ozon">на странице для Ozon</a>. Wildberries и Ozon — в одном кабинете.</p>
 
-  <div class="cta-band"><h2>Подключите Ozon-кабинет</h2><p class="muted">7 дней триала.</p><a class="btn btn-primary" href="/ozon">Авто-Отвеччик для Ozon →</a></div>
+  <div class="cta-band"><h2>Подключите Ozon-кабинет</h2><p class="muted">7 дней триала.</p><a class="btn btn-primary" href="/ozon">Авто-ответчик для Ozon →</a></div>
 </div></section>
 <footer class="footer"><div class="wrap footer-inner"><div class="muted small"><a href="/ozon">Ozon</a> · <a href="/wildberries">Wildberries</a> · <a href="/pricing">Тарифы</a> · <a href="/blog/avtootvety-wildberries">← Как автоматизировать ответы</a></div><div class="muted small"><p>hi@avto-otvetchik.com</p></div></div></footer>
 <script>

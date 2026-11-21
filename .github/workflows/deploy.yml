@@ -85,7 +85,7 @@ jobs:
               "APP_ENV": "production",
               "DATABASE_URL": "postgresql+asyncpg://wbweb:wbweb@localhost:5432/wbweb",
               "PUBLIC_BASE_URL": "https://avto-otvetchik.com",
-              "MAIL_FROM": "Авто-Отвеччик <no-reply@avto-otvetchik.com>",
+              "MAIL_FROM": "Авто-ответчик <no-reply@avto-otvetchik.com>",
               "SMTP_PORT": "587",
               "SMTP_STARTTLS": "true",
               "PRICE_STARTER": "0",

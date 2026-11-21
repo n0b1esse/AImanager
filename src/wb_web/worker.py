@@ -93,7 +93,7 @@ async def main_loop(interval: float) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Авто-Отвеччик background worker")
+    parser = argparse.ArgumentParser(description="Авто-ответчик background worker")
     parser.add_argument("--interval", type=float, default=5.0)
     args = parser.parse_args()
     try:

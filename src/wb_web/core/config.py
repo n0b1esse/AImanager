@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     # Comma-separated emails that become read-only support admins
     admin_support_emails: str = ""
     # Email backends: console (dev default) or smtp
-    mail_from: str = "Авто-Отвеччик <no-reply@localhost>"
+    mail_from: str = "Авто-ответчик <no-reply@localhost>"
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""

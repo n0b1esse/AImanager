@@ -1,4 +1,4 @@
-# Деплой Авто-Отвеччика на VPS (avto-otvetchik.com)
+# Деплой Авто-ответчика на VPS (avto-otvetchik.com)
 
 Прод-стек: `Caddy` (TLS + статика лендинга) → `FastAPI` (приложение) + `worker` + `Postgres`.
 Всё в Docker Compose, один домен, HTTPS выпускается автоматически.
@@ -91,7 +91,7 @@ SENTRY_DSN=<если есть>
 OWNER_EMAILS=<ваш email, получит админку и 2FA>
 ADMIN_SUPPORT_EMAILS=<опционально, read-only>
 PUBLIC_BASE_URL=https://avto-otvetchik.com
-MAIL_FROM=Авто-Отвеччик <no-reply@avto-otvetchik.com>
+MAIL_FROM=Авто-ответчик <no-reply@avto-otvetchik.com>
 SMTP_HOST=<хост почтового провайдера>
 SMTP_PORT=587
 SMTP_USER=<логин>
@@ -152,7 +152,7 @@ Secrets репозитория (GitHub → Settings → Secrets and variables �
 | `SSH_PORT_VPS` | `22` | уже в secrets |
 | `FERNET_KEY` / `SESSION_SECRET` / `POSTGRES_PASSWORD` | сгенерированы | уже в secrets |
 | `OWNER_EMAILS` | email владельца | владелец |
-| `MAIL_FROM` | `Авто-Отвеччик <no-reply@avto-otvetchik.com>` | по умолчанию в воркфлоу |
+| `MAIL_FROM` | `Авто-ответчик <no-reply@avto-otvetchik.com>` | по умолчанию в воркфлоу |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_STARTTLS` | данные почтового провайдера | владелец |
 | `SENTRY_DSN`, `ADMIN_SUPPORT_EMAILS`, `PRICE_*` | опционально | владелец |
 

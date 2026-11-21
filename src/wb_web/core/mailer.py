@@ -23,17 +23,17 @@ def build_magic_link_email(*, to: str, link: str, ttl_minutes: int) -> EmailMess
     message = EmailMessage()
     message["From"] = get_settings().mail_from
     message["To"] = to
-    message["Subject"] = "Вход в Авто-Отвеччик"
+    message["Subject"] = "Вход в Авто-ответчик"
     message.set_content(
         f"""Здравствуйте!
 
-Вы запросили вход в Авто-Отвеччик. Ссылка одноразовая и действует {ttl_minutes} минут:
+Вы запросили вход в Авто-ответчик. Ссылка одноразовая и действует {ttl_minutes} минут:
 
 {link}
 
 Если вы не запрашивали вход — просто проигнорируйте это письмо.
 
-— Авто-Отвеччик
+— Авто-ответчик
 """
     )
     return message
