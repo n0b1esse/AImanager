@@ -29,6 +29,9 @@
 
 Рекомендуется Ubuntu 24.04, 2 vCPU / 4 GB, 20+ GB диска.
 
+> Если деплой идёт под **root**, воркфлоу сам поставит Docker/git и создаст `/opt/avto-otvetchik` — шаги ниже можно пропустить, достаточно добавить публичный ключ в `/root/.ssh/authorized_keys`.
+> Для **не-root** пользователя Docker нужно поставить заранее и добавить пользователя в группу `docker`, иначе `docker compose` не запустится.
+
 ```bash
 # Docker + Compose plugin
 curl -fsSL https://get.docker.com | sh

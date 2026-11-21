@@ -107,6 +107,12 @@ jobs:
           ssh -i ~/.ssh/vps_key -o StrictHostKeyChecking=accept-new -p "$SSH_PORT" \
             "$SSH_USER@$SSH_HOST" bash -s <<'REMOTE'
           set -e
+          if ! command -v docker >/dev/null 2>&1; then
+            apt-get update -qq
+            apt-get install -y -qq curl git
+            curl -fsSL https://get.docker.com | sh
+          fi
+          mkdir -p /opt/avto-otvetchik
           if [ ! -d /opt/avto-otvetchik/.git ]; then
             git clone https://github.com/n0b1esse/AImanager.git /opt/avto-otvetchik
           fi
