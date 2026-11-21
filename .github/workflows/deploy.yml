@@ -1,8 +1,8 @@
 name: Deploy VPS
 
 # Прод-деплой на VPS вручную (workflow_dispatch) или по тегу v*.
-# Секреты — из GitHub repo secrets, в файле их нет.
-# Первый деплой — вручную по VPS (см. docs/DEPLOY_VPS.md), дальше — этот воркфлоу.
+# Все секреты — в GitHub repo secrets, в репозитории их нет.
+# Первый запуск создаст /opt/avto-otvetchik и .env на сервере.
 
 on:
   workflow_dispatch:
@@ -14,15 +14,80 @@ jobs:
   deploy:
     name: deploy over SSH
     runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST_VPS }}
+      SSH_USER: ${{ secrets.SSH_USER_VPS }}
+      SSH_PORT: ${{ secrets.SSH_PORT_VPS }}
+      FERNET_KEY: ${{ secrets.FERNET_KEY }}
+      SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      OWNER_EMAILS: ${{ secrets.OWNER_EMAILS }}
+      ADMIN_SUPPORT_EMAILS: ${{ secrets.ADMIN_SUPPORT_EMAILS }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      MAIL_FROM: ${{ secrets.MAIL_FROM }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      SMTP_STARTTLS: ${{ secrets.SMTP_STARTTLS }}
+      PRICE_STARTER: ${{ secrets.PRICE_STARTER }}
+      PRICE_PRO: ${{ secrets.PRICE_PRO }}
+      PRICE_BUSINESS: ${{ secrets.PRICE_BUSINESS }}
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check required secrets
+        run: |
+          [ -n "$SSH_HOST" ] || { echo "::error::SSH_HOST_VPS secret is not set"; exit 1; }
+          [ -n "$SSH_USER" ] || { echo "::error::SSH_USER_VPS secret is not set"; exit 1; }
+          [ -n "$FERNET_KEY" ] || { echo "::error::FERNET_KEY secret is not set"; exit 1; }
+          [ -n "$SESSION_SECRET" ] || { echo "::error::SESSION_SECRET secret is not set"; exit 1; }
+          [ -n "$POSTGRES_PASSWORD" ] || { echo "::error::POSTGRES_PASSWORD secret is not set"; exit 1; }
+
+      - name: Build .env
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          keys = [
+              "APP_ENV", "POSTGRES_PASSWORD", "DATABASE_URL", "FERNET_KEY",
+              "SESSION_SECRET", "SENTRY_DSN", "OWNER_EMAILS", "ADMIN_SUPPORT_EMAILS",
+              "PUBLIC_BASE_URL", "MAIL_FROM", "SMTP_HOST", "SMTP_PORT", "SMTP_USER",
+              "SMTP_PASSWORD", "SMTP_STARTTLS", "PRICE_STARTER", "PRICE_PRO", "PRICE_BUSINESS",
+          ]
+          defaults = {
+              "APP_ENV": "production",
+              "DATABASE_URL": "postgresql+asyncpg://wbweb:wbweb@localhost:5432/wbweb",
+              "PUBLIC_BASE_URL": "https://avto-otvetchik.com",
+              "MAIL_FROM": "Авто-Отвеччик <no-reply@avto-otvetchik.com>",
+              "SMTP_PORT": "587",
+              "SMTP_STARTTLS": "true",
+              "PRICE_STARTER": "0",
+              "PRICE_PRO": "0",
+              "PRICE_BUSINESS": "0",
+          }
+          lines = [f"{k}={os.environ.get(k) or defaults.get(k, '')}" for k in keys]
+          Path(".env.generated").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
 
       - name: Deploy via SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_KEY_VPS }}" > ~/.ssh/vps_key
           chmod 600 ~/.ssh/vps_key
-          ssh -i ~/.ssh/vps_key -o StrictHostKeyChecking=accept-new \
-            -p "${{ secrets.SSH_PORT_VPS }}" \
-            "${{ secrets.SSH_USER_VPS }}@${{ secrets.SSH_HOST_VPS }}" \
-            "cd /opt/avto-otvetchik && git pull && docker compose -f docker-compose.prod.yml up -d --build"
+          scp -i ~/.ssh/vps_key -o StrictHostKeyChecking=accept-new -P "$SSH_PORT" \
+            .env.generated "$SSH_USER@$SSH_HOST:/tmp/avto-env"
+          ssh -i ~/.ssh/vps_key -o StrictHostKeyChecking=accept-new -p "$SSH_PORT" \
+            "$SSH_USER@$SSH_HOST" bash -s <<'REMOTE'
+          set -e
+          if [ ! -d /opt/avto-otvetchik/.git ]; then
+            git clone https://github.com/n0b1esse/AImanager.git /opt/avto-otvetchik
+          fi
+          cd /opt/avto-otvetchik
+          install -m 600 /tmp/avto-env .env
+          rm -f /tmp/avto-env
+          git pull
+          docker compose -f docker-compose.prod.yml up -d --build
+          REMOTE

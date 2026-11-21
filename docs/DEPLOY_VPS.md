@@ -135,14 +135,29 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 Логи: `docker compose -f docker-compose.prod.yml logs -f app caddy`
 
-### Авто-деплой из GitHub (опционально)
+### Авто-деплой из GitHub
 
-`.github/workflows/deploy.yml` деплоит по тегу `v*` или кнопкой «Run workflow». Нужны secrets репозитория (GitHub → Settings → Secrets and variables → Actions):
+`.github/workflows/deploy.yml` деплоит по тегу `v*` или кнопкой «Run workflow». Воркфлоу сам клонирует репозиторий в `/opt/avto-otvetchik`, записывает `.env` из secrets и запускает Compose ( ручной `.env` из раздела 3 в этом случае не нужен ).
 
-- `SSH_HOST_VPS` — IP VPS
-- `SSH_USER_VPS` — пользователь SSH
-- `SSH_KEY_VPS` — приватный ключ целиком (включая завершающий перевод строки)
-- `SSH_PORT_VPS` — порт (обычно 22)
+Secrets репозитория (GitHub → Settings → Secrets and variables → Actions):
+
+| Secret | Значение | Кто заполняет |
+|---|---|---|
+| `SSH_HOST_VPS` | IP VPS | владелец |
+| `SSH_USER_VPS` | пользователь SSH | владелец |
+| `SSH_KEY_VPS` | приватный ключ целиком | уже в secrets |
+| `SSH_PORT_VPS` | `22` | уже в secrets |
+| `FERNET_KEY` / `SESSION_SECRET` / `POSTGRES_PASSWORD` | сгенерированы | уже в secrets |
+| `OWNER_EMAILS` | email владельца | владелец |
+| `MAIL_FROM` | `Авто-Отвеччик <no-reply@avto-otvetchik.com>` | по умолчанию в воркфлоу |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_STARTTLS` | данные почтового провайдера | владелец |
+| `SENTRY_DSN`, `ADMIN_SUPPORT_EMAILS`, `PRICE_*` | опционально | владелец |
+
+Публичный ключ для `authorized_keys` на VPS (владелец добавляет):
+
+```
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIRdrZn0+8sxaCUfBsz2PBqXRSaVrmHqfJ440xsRA+Jc github-actions-avto-otvetchik
+```
 
 ## 6. Проверка
 
