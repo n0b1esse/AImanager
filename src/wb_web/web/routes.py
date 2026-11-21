@@ -33,14 +33,14 @@ from wb_web.admin.deps import (
 )
 from wb_web.ai.generate import AIRequestError, DailyLimitExceeded, generate_for_review
 from wb_web.auth.deps import get_optional_user
-from wb_web.auth.service import request_magic_link
+from wb_web.auth.service import login_direct, request_magic_link
 from wb_web.billing.access import resolve_access
 from wb_web.billing.activate import activate_subscription
 from wb_web.billing.plans import PLANS, get_plan, normalize_plan
 from wb_web.core.config import get_settings
 from wb_web.core.events import track
 from wb_web.core.security import SecretEncryptor, mask_secret
-from wb_web.core.session import sign_session
+from wb_web.core.session import SESSION_COOKIE, SESSION_TTL_SECONDS, sign_session
 from wb_web.db.base import get_session
 from wb_web.db.models import AdminAuditLog, Review, Shop, Subscription, User
 from wb_web.niches import load_packs
@@ -79,6 +79,19 @@ def _redirect(url: str) -> RedirectResponse:
 def _with_msg(url: str, msg: str, kind: str = "ok") -> RedirectResponse:
     sep = "&" if "?" in url else "?"
     return _redirect(f"{url}{sep}msg={quote(msg)}&kind={kind}")
+
+
+def _set_web_session_cookie(response: RedirectResponse, user_id: int) -> None:
+    settings = get_settings()
+    response.set_cookie(
+        SESSION_COOKIE,
+        sign_session({"uid": user_id}, settings.session_secret, SESSION_TTL_SECONDS),
+        httponly=True,
+        samesite="lax",
+        secure=settings.app_env == "production",
+        max_age=SESSION_TTL_SECONDS,
+        path="/",
+    )
 
 
 async def _web_user(request: Request, session: SessionDep) -> User:
@@ -169,6 +182,7 @@ async def login_page(request: Request, session: SessionDep):
         "selected_plan": selected,
         "selected": get_plan(selected) if selected else None,
         "plans": PLANS,
+        "direct_login": get_settings().direct_login,
     }
     return templates.TemplateResponse(request, "login.html", ctx)
 
@@ -183,6 +197,12 @@ async def login_submit(
     settings = get_settings()
     try:
         selected = normalize_plan(plan)
+        if settings.direct_login:
+            # TEMPORARY until SMTP/mailboxes are live: enter -> immediately in the app.
+            user = await login_direct(session, email, selected)
+            response = _redirect("/app")
+            _set_web_session_cookie(response, user.id)
+            return response
         raw = await request_magic_link(session, email, selected)
         suffix = f"&plan={selected}" if selected else ""
         dev_link = f"/auth/link?token={raw}{suffix}" if settings.app_env != "production" else None

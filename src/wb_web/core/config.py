@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     session_secret: str = "dev-only-change-me"
     # Magic link lifetime in minutes.
     magic_link_ttl_minutes: int = 15
+    # TEMPORARY: sign in immediately after entering email, without sending a link.
+    # Enable until SMTP/mailboxes are ready, then set DIRECT_LOGIN=false again.
+    direct_login: bool = False
     sentry_dsn: str = ""
     # Subscription prices for the internal sales dashboard (price_seller_unit = ваша валюта)
     price_starter: float = 0.0

@@ -51,6 +51,9 @@ jobs:
       PRICE_STARTER: ${{ secrets.PRICE_STARTER }}
       PRICE_PRO: ${{ secrets.PRICE_PRO }}
       PRICE_BUSINESS: ${{ secrets.PRICE_BUSINESS }}
+      # TEMPORARY: direct sign-in until SMTP/mailboxes are live.
+      # Set DIRECT_LOGIN=false in secrets to restore magic-link emails.
+      DIRECT_LOGIN: ${{ secrets.DIRECT_LOGIN || 'true' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -80,6 +83,7 @@ jobs:
               "SESSION_SECRET", "SENTRY_DSN", "OWNER_EMAILS", "ADMIN_SUPPORT_EMAILS",
               "PUBLIC_BASE_URL", "MAIL_FROM", "SMTP_HOST", "SMTP_PORT", "SMTP_USER",
               "SMTP_PASSWORD", "SMTP_STARTTLS", "PRICE_STARTER", "PRICE_PRO", "PRICE_BUSINESS",
+              "DIRECT_LOGIN",
           ]
           defaults = {
               "APP_ENV": "production",
@@ -91,6 +95,7 @@ jobs:
               "PRICE_STARTER": "0",
               "PRICE_PRO": "0",
               "PRICE_BUSINESS": "0",
+              "DIRECT_LOGIN": "true",  # temporary: remove when SMTP is live
           }
           lines = [f"{k}={os.environ.get(k) or defaults.get(k, '')}" for k in keys]
           Path(".env.generated").write_text("\n".join(lines) + "\n", encoding="utf-8")

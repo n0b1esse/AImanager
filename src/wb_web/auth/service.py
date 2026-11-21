@@ -25,13 +25,8 @@ class InvalidTokenError(Exception):
     pass
 
 
-async def request_magic_link(session: AsyncSession, email: str, plan: str | None = None) -> str:
-    """Create (or reuse) a user, issue a one-time token, return the raw token.
-
-    A selected plan travels with the magic link so the choice survives the
-    email round-trip and is applied when the link is consumed.
-    """
-    settings = get_settings()
+async def ensure_user(session: AsyncSession, email: str, plan: str | None = None) -> User:
+    """Create (or reuse) a user and apply the chosen plan to a fresh trial."""
     email = email.strip().lower()
     if "@" not in email or len(email) > 320:
         raise ValueError("invalid email")
@@ -46,13 +41,40 @@ async def request_magic_link(session: AsyncSession, email: str, plan: str | None
         session.add(
             Subscription(
                 user_id=user.id,
-                plan="trial",
+                plan=selected_plan or "trial",
                 status="active",
                 provider="manual",
                 current_period_end=user.trial_ends_at,
             )
         )
         await track(session, event="user.signup", user_id=user.id)
+    elif selected_plan:
+        subscription = (
+            await session.execute(select(Subscription).where(Subscription.user_id == user.id))
+        ).scalar_one_or_none()
+        # Only override the trial placeholder — never touch a paid/cancelled plan.
+        if subscription is not None and subscription.plan == "trial":
+            subscription.plan = selected_plan
+    return user
+
+
+async def login_direct(session: AsyncSession, email: str, plan: str | None = None) -> User:
+    """TEMPORARY: create/reuse the user and sign in without sending an email."""
+    user = await ensure_user(session, email, plan)
+    await session.commit()
+    await track(session, event="user.login", user_id=user.id)
+    return user
+
+
+async def request_magic_link(session: AsyncSession, email: str, plan: str | None = None) -> str:
+    """Create (or reuse) a user, issue a one-time token, return the raw token.
+
+    A selected plan travels with the magic link so the choice survives the
+    email round-trip and is applied when the link is consumed.
+    """
+    settings = get_settings()
+    user = await ensure_user(session, email, plan)
+    selected_plan = normalize_plan(plan)
 
     raw_token = generate_token()
     ttl = timedelta(minutes=settings.magic_link_ttl_minutes)

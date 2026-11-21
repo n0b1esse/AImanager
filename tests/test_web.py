@@ -7,6 +7,7 @@ from admin_helpers import setup_admin
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from wb_web.core.config import get_settings
 from wb_web.db.base import get_sessionmaker
 from wb_web.db.models import AdminAuditLog, Review, Shop, Subscription, User
 from wb_web.main import create_app
@@ -73,6 +74,29 @@ def test_login_with_selected_plan_persists_it() -> None:
     match = re.search(r'href="(/auth/link\?token=[^"]+)"', sent.text)
     assert match and "plan=pro" in match.group(1), "selected plan must travel with the magic link"
     assert client.get(html.unescape(match.group(1))).status_code == 303
+
+    async def _plan() -> str:
+        sm = get_sessionmaker()
+        async with sm() as session:
+            user = (await session.execute(select(User).where(User.email == email))).scalar_one()
+            sub = (await session.execute(select(Subscription).where(Subscription.user_id == user.id))).scalar_one()
+            return sub.plan
+
+    assert asyncio.run(_plan()) == "pro"
+
+
+def test_direct_login_skips_email(monkeypatch) -> None:
+    monkeypatch.setattr(get_settings(), "direct_login", True)
+    client = TestClient(create_app(), follow_redirects=False)
+    email = "direct@example.com"
+
+    page = client.get("/login?plan=pro")
+    assert "Войти в кабинет" in page.text
+
+    response = client.post("/login", data={"email": email, "plan": "pro"})
+    assert response.status_code == 303
+    assert response.headers["location"] == "/app"
+    assert client.get("/app").status_code == 200
 
     async def _plan() -> str:
         sm = get_sessionmaker()

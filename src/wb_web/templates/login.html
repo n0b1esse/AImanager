@@ -3,9 +3,13 @@
 {% block content %}
 <div class="login-box">
   <div class="login-intro">
-    <span class="login-eyebrow">7 дней бесплатно · без карты</span>
+    <span class="login-eyebrow">{% if direct_login %}Сразу в кабинет · без письма{% else %}7 дней бесплатно · без карты{% endif %}</span>
     <h1>Войти и начать</h1>
+    {% if direct_login %}
+    <p class="muted">Введите почту — и сразу попадёте в кабинет. Подтверждение по ссылке подключим, когда заработает наша почта.</p>
+    {% else %}
     <p class="muted">Пришлём ссылку на почту — пароль придумывать не нужно. После перехода вы сразу попадёте в кабинет.</p>
+    {% endif %}
   </div>
 
   <div class="panel login-panel">
@@ -36,10 +40,10 @@
       <label for="email">Ваша почта</label>
       <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" autofocus>
       <div class="form-foot">
-        <button class="btn primary login-submit" type="submit">Отправить ссылку для входа</button>
+        <button class="btn primary login-submit" type="submit">{% if direct_login %}Войти в кабинет{% else %}Отправить ссылку для входа{% endif %}</button>
       </div>
     </form>
-    <p class="muted small login-note">Мы не храним ваш пароль и не рассылаем письма без вашего запроса.</p>
+    <p class="muted small login-note">{% if direct_login %}Сейчас вход без письма: проверка почты появится через пару дней.{% else %}Мы не храним ваш пароль и не рассылаем письма без вашего запроса.{% endif %}</p>
     {% endif %}
   </div>
 </div>
