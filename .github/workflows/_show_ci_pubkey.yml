@@ -1,0 +1,20 @@
+# ВРЕМЕННЫЙ: показать публичную половину SSH_KEY_VPS (без подключения к серверу).
+name: Show CI pubkey (temp)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  show:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Derive public key from secret
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY_VPS }}
+        run: |
+          printf '%s\n' "$SSH_KEY" > /tmp/ci_key
+          chmod 600 /tmp/ci_key
+          echo "CI_PUBKEY_START"
+          ssh-keygen -y -f /tmp/ci_key
+          echo "CI_PUBKEY_END"
+          rm -f /tmp/ci_key
