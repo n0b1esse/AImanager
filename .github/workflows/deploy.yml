@@ -120,10 +120,9 @@ jobs:
           install -m 600 /tmp/avto-env .env
           rm -f /tmp/avto-env
           git pull
-          # Миграции до старта воркера (иначе он падает на отсутствующих таблицах)
-          # -T обязателен: без него compose run продолжает читать stdin и «съедает»
-          # остальные строки этого heredoc (сборку и проверку здоровья).
-          docker compose -f docker-compose.prod.yml run --rm -T app alembic upgrade head
+          # ВАЖНО: не используем `docker compose run` здесь — даже с -T он забирает
+          # stdin heredoc, из-за чего сборка и проверка ниже не выполняются.
+          # Миграции при старте делает сам app: alembic upgrade head && uvicorn ...
           docker compose -f docker-compose.prod.yml up -d --build
           # app при старте тоже гоняет alembic — ждём, пока uvicorn реально поднимется
           ok=0
