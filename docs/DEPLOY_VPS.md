@@ -159,7 +159,7 @@ Secrets репозитория (GitHub → Settings → Secrets and variables �
 Публичный ключ для `authorized_keys` на VPS (владелец добавляет):
 
 ```
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIRdrZn0+8sxaCUfBsz2PBqXRSaVrmHqfJ440xsRA+Jc github-actions-avto-otvetchik
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPefEjLtYH1NfleR6qGSrjwmG0qMqn3m1METgfDl5Hx/ github-actions-avto-otvetchik
 ```
 
 ## 6. Проверка
