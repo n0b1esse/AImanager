@@ -38,15 +38,17 @@ def _set_session_cookie(response: Response, user_id: int) -> None:
 
 class RequestLinkBody(BaseModel):
     email: EmailStr
+    plan: str | None = None
 
 
 class VerifyBody(BaseModel):
     token: str
+    plan: str | None = None
 
 
 @router.post("/request")
 async def request_link(body: RequestLinkBody, session: SessionDep) -> dict:
-    raw_token = await request_magic_link(session, body.email)
+    raw_token = await request_magic_link(session, body.email, body.plan)
     # Anti-enumeration: same response either way. Dev convenience: expose token outside production.
     response = {"ok": True}
     if get_settings().app_env != "production":
@@ -57,7 +59,7 @@ async def request_link(body: RequestLinkBody, session: SessionDep) -> dict:
 @router.post("/verify")
 async def verify_link(body: VerifyBody, session: SessionDep) -> Response:
     try:
-        user = await verify_magic_link(session, body.token)
+        user = await verify_magic_link(session, body.token, body.plan)
     except InvalidTokenError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     response = JSONResponse({"ok": True, "user_id": user.id, "email": user.email})
@@ -73,9 +75,9 @@ async def logout() -> Response:
 
 
 @router.get("/link")
-async def consume_link(token: str, session: SessionDep) -> Response:
+async def consume_link(token: str, session: SessionDep, plan: str | None = None) -> Response:
     try:
-        user = await verify_magic_link(session, token)
+        user = await verify_magic_link(session, token, plan)
     except InvalidTokenError:
         return RedirectResponse("/login?msg=Ссылка%20недействительна%20или%20устарела&kind=err", status_code=303)
     response = RedirectResponse("/app", status_code=303)

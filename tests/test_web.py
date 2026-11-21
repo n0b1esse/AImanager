@@ -1,4 +1,5 @@
 import asyncio
+import html
 import re
 from datetime import UTC, datetime
 
@@ -7,7 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from wb_web.db.base import get_sessionmaker
-from wb_web.db.models import AdminAuditLog, Review, Shop, User
+from wb_web.db.models import AdminAuditLog, Review, Shop, Subscription, User
 from wb_web.main import create_app
 
 
@@ -56,6 +57,31 @@ def test_login_page_renders() -> None:
     response = client.get("/login")
     assert response.status_code == 200
     assert "Авто-Отвеччик" in response.text
+
+
+def test_login_with_selected_plan_persists_it() -> None:
+    client = TestClient(create_app(), follow_redirects=False)
+    email = "plan-flow@example.com"
+
+    page = client.get("/login?plan=pro")
+    assert page.status_code == 200
+    assert "Рост" in page.text
+    assert 'name="plan" value="pro"' in page.text
+
+    sent = client.post("/login", data={"email": email, "plan": "pro"})
+    assert sent.status_code == 200
+    match = re.search(r'href="(/auth/link\?token=[^"]+)"', sent.text)
+    assert match and "plan=pro" in match.group(1), "selected plan must travel with the magic link"
+    assert client.get(html.unescape(match.group(1))).status_code == 303
+
+    async def _plan() -> str:
+        sm = get_sessionmaker()
+        async with sm() as session:
+            user = (await session.execute(select(User).where(User.email == email))).scalar_one()
+            sub = (await session.execute(select(Subscription).where(Subscription.user_id == user.id))).scalar_one()
+            return sub.plan
+
+    assert asyncio.run(_plan()) == "pro"
 
 
 def test_root_redirects_to_login_or_app() -> None:

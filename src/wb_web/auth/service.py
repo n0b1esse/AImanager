@@ -12,6 +12,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from wb_web.billing.plans import normalize_plan
 from wb_web.core.config import get_settings
 from wb_web.core.events import track
 from wb_web.core.security import generate_token, hash_token
@@ -24,12 +25,17 @@ class InvalidTokenError(Exception):
     pass
 
 
-async def request_magic_link(session: AsyncSession, email: str) -> str:
-    """Create (or reuse) a user, issue a one-time token, return the raw token."""
+async def request_magic_link(session: AsyncSession, email: str, plan: str | None = None) -> str:
+    """Create (or reuse) a user, issue a one-time token, return the raw token.
+
+    A selected plan travels with the magic link so the choice survives the
+    email round-trip and is applied when the link is consumed.
+    """
     settings = get_settings()
     email = email.strip().lower()
     if "@" not in email or len(email) > 320:
         raise ValueError("invalid email")
+    selected_plan = normalize_plan(plan)
 
     user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if user is None:
@@ -56,7 +62,12 @@ async def request_magic_link(session: AsyncSession, email: str) -> str:
     await session.commit()
 
     base = settings.public_base_url.rstrip("/") if settings.public_base_url else ""
-    link = f"{base}/auth/link?token={raw_token}" if base else f"/auth/link?token={raw_token}"
+    suffix = f"&plan={selected_plan}" if selected_plan else ""
+    link = (
+        f"{base}/auth/link?token={raw_token}{suffix}"
+        if base
+        else f"/auth/link?token={raw_token}{suffix}"
+    )
     if settings.smtp_host or base:
         from wb_web.core.mailer import send_magic_link
 
@@ -70,7 +81,7 @@ async def request_magic_link(session: AsyncSession, email: str) -> str:
     return raw_token
 
 
-async def verify_magic_link(session: AsyncSession, raw_token: str) -> User:
+async def verify_magic_link(session: AsyncSession, raw_token: str, plan: str | None = None) -> User:
     now = datetime.now(UTC)
     token_hash = hash_token(raw_token)
     token = (
@@ -86,6 +97,14 @@ async def verify_magic_link(session: AsyncSession, raw_token: str) -> User:
     token.consumed_at = now
 
     user = (await session.execute(select(User).where(User.id == token.user_id))).scalar_one()
+    selected_plan = normalize_plan(plan)
+    if selected_plan:
+        subscription = (
+            await session.execute(select(Subscription).where(Subscription.user_id == user.id))
+        ).scalar_one_or_none()
+        # Only override the trial placeholder — never touch a paid/cancelled plan.
+        if subscription is not None and subscription.plan == "trial":
+            subscription.plan = selected_plan
     await session.commit()
     await track(session, event="user.login", user_id=user.id)
     return user

@@ -2,23 +2,44 @@
 {% block title %}Вход — Авто-Отвеччик{% endblock %}
 {% block content %}
 <div class="login-box">
-  <div class="panel">
-    <h1 style="margin-top:0">Авто-Отвеччик</h1>
-    <p class="muted">Ответы на отзывы Wildberries от вашего LLM. Семь дней триала.</p>
+  <div class="login-intro">
+    <span class="login-eyebrow">7 дней бесплатно · без карты</span>
+    <h1>Войти и начать</h1>
+    <p class="muted">Пришлём ссылку на почту — пароль придумывать не нужно. После перехода вы сразу попадёте в кабинет.</p>
+  </div>
+
+  <div class="panel login-panel">
+    {% if selected %}
+    <div class="chosen-plan">
+      <span class="chosen-label">Выбранный тариф</span>
+      <div class="chosen-row">
+        <span class="chosen-name">{{ selected.name }}</span>
+        <span class="chosen-count">{{ selected.cabinets }} {{ selected.cabinet_label }}</span>
+      </div>
+      <div class="plan-switch" aria-label="Изменить тариф">
+        {% for key, p in plans.items() %}
+        <a href="/login?plan={{ key }}" class="{% if key == selected_plan %}active{% endif %}">{{ p.name }}</a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
     {% if sent %}
-      <div class="flash ok">Ссылка для входа отправлена на <b>{{ sent }}</b>. Проверьте почту (или консоль сервера в dev-режиме).</div>
+      <div class="flash ok">Ссылка для входа отправлена на <b>{{ sent }}</b>. Проверьте почту — письмо может быть в папке «Спам».</div>
       {% if dev_link %}
-      <p class="muted small">DEV: <a href="{{ dev_link }}">{{ dev_link }}</a></p>
+      <p class="muted small">DEV: <a href="{{ dev_link }}">открыть ссылку сразу</a></p>
       {% endif %}
-      <p><a href="/login">Другой email →</a></p>
+      <p><a href="/login{% if selected_plan %}?plan={{ selected_plan }}{% endif %}">Другой email →</a></p>
     {% else %}
     <form method="post" action="/login">
-      <label for="email">Email</label>
+      {% if selected_plan %}<input type="hidden" name="plan" value="{{ selected_plan }}">{% endif %}
+      <label for="email">Ваша почта</label>
       <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" autofocus>
       <div class="form-foot">
-        <button class="btn primary" type="submit" style="width:100%">Получить ссылку для входа</button>
+        <button class="btn primary login-submit" type="submit">Отправить ссылку для входа</button>
       </div>
     </form>
+    <p class="muted small login-note">Мы не храним ваш пароль и не рассылаем письма без вашего запроса.</p>
     {% endif %}
   </div>
 </div>

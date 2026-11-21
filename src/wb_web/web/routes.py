@@ -36,6 +36,7 @@ from wb_web.auth.deps import get_optional_user
 from wb_web.auth.service import request_magic_link
 from wb_web.billing.access import resolve_access
 from wb_web.billing.activate import activate_subscription
+from wb_web.billing.plans import PLANS, get_plan, normalize_plan
 from wb_web.core.config import get_settings
 from wb_web.core.events import track
 from wb_web.core.security import SecretEncryptor, mask_secret
@@ -158,22 +159,33 @@ async def login_page(request: Request, session: SessionDep):
     user = await get_optional_user(request, session)
     if user is not None:
         return _redirect("/app")
+    selected = normalize_plan(request.query_params.get("plan"))
     ctx = {
         "user": None,
         "access": None,
         "flash": request.query_params.get("msg"),
         "flash_kind": request.query_params.get("kind", "ok"),
         "is_owner": False,
+        "selected_plan": selected,
+        "selected": get_plan(selected) if selected else None,
+        "plans": PLANS,
     }
     return templates.TemplateResponse(request, "login.html", ctx)
 
 
 @router.post("/login")
-async def login_submit(request: Request, session: SessionDep, email: Annotated[str, Form()]):
+async def login_submit(
+    request: Request,
+    session: SessionDep,
+    email: Annotated[str, Form()],
+    plan: Annotated[str | None, Form()] = None,
+):
     settings = get_settings()
     try:
-        raw = await request_magic_link(session, email)
-        dev_link = f"/auth/link?token={raw}" if settings.app_env != "production" else None
+        selected = normalize_plan(plan)
+        raw = await request_magic_link(session, email, selected)
+        suffix = f"&plan={selected}" if selected else ""
+        dev_link = f"/auth/link?token={raw}{suffix}" if settings.app_env != "production" else None
         ctx = {
             "user": None,
             "access": None,
@@ -181,6 +193,9 @@ async def login_submit(request: Request, session: SessionDep, email: Annotated[s
             "sent": email.strip().lower(),
             "dev_link": dev_link,
             "is_owner": False,
+            "selected_plan": selected,
+            "selected": get_plan(selected) if selected else None,
+            "plans": PLANS,
         }
         return templates.TemplateResponse(request, "login.html", ctx)
     except ValueError:
@@ -190,6 +205,9 @@ async def login_submit(request: Request, session: SessionDep, email: Annotated[s
             "flash": "Некорректный email",
             "flash_kind": "err",
             "is_owner": False,
+            "selected_plan": normalize_plan(plan),
+            "selected": get_plan(plan) if normalize_plan(plan) else None,
+            "plans": PLANS,
         }
         return templates.TemplateResponse(request, "login.html", ctx, status_code=400)
 
@@ -590,7 +608,7 @@ async def billing_page(request: Request, session: SessionDep):
     subscription = (
         await session.execute(select(Subscription).where(Subscription.user_id == user.id))
     ).scalar_one_or_none()
-    ctx.update({"subscription": subscription})
+    ctx.update({"subscription": subscription, "plans": PLANS})
     return templates.TemplateResponse(request, "billing.html", ctx)
 
 
