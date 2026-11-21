@@ -24,14 +24,14 @@ class Settings(BaseSettings):
     price_starter: float = 0.0
     price_pro: float = 0.0
     price_business: float = 0.0
-    # Public base URL used in emails (e.g. https://aimanager.kg). Empty in dev.
+    # Public base URL used in emails (e.g. https://avto-otvetchik.com). Empty in dev.
     public_base_url: str = ""
     # Comma-separated emails that become admin on first login (later: DB-driven roles).
     owner_emails: str = ""
     # Comma-separated emails that become read-only support admins
     admin_support_emails: str = ""
     # Email backends: console (dev default) or smtp
-    mail_from: str = "AImanager <no-reply@localhost>"
+    mail_from: str = "Авто-Отвеччик <no-reply@localhost>"
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""

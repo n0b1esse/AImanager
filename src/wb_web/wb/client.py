@@ -100,7 +100,7 @@ class WildberriesClient:
         self._http = http_client or httpx.AsyncClient(
             timeout=timeout,
             follow_redirects=False,
-            headers={"User-Agent": "AImanager/0.1"},
+            headers={"User-Agent": "Avto-Otvetchik/0.1"},
         )
 
     async def __aenter__(self) -> WildberriesClient:

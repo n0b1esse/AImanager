@@ -1,4 +1,4 @@
-# AImanager (WB Review AI)
+# Авто-Отвеччик (WB Review AI)
 
 > Продавцы Wildberries получают AI-ответы на отзывы через свой LLM-ключ.
 > Этот репозиторий — новый веб-сервис. Десктопная версия (`../WBReviewAIManager`) — архив-референс, не развивается.
@@ -13,6 +13,8 @@
 - **Модель:** только веб, соло-разработка.
 
 Подробный план и риски — в Obsidian: `01_Projects/AImanager/00_Дашборд.md` и в `docs/PLAN.md`.
+
+**Прод:** `https://avto-otvetchik.com` · деплой на VPS (Caddy + Docker Compose) — `docs/DEPLOY_VPS.md`.
 
 ## Стек
 

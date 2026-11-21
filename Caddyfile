@@ -1,0 +1,54 @@
+# Caddy для avto-otvetchik.com
+# Статика лендинга (site/) + reverse-proxy приложения (FastAPI) + авто-TLS (Let's Encrypt).
+# Требования: A-записи avto-otvetchik.com и www -> IP VPS, порты 80/443 открыты.
+
+{
+	email hi@avto-otvetchik.com
+}
+
+avto-otvetchik.com, www.avto-otvetchik.com {
+	encode zstd gzip
+
+	# --- Приложение (FastAPI) ---
+	handle /app* {
+		reverse_proxy app:8000
+	}
+	handle /auth* {
+		reverse_proxy app:8000
+	}
+	handle /admin* {
+		reverse_proxy app:8000
+	}
+	handle /shops* {
+		reverse_proxy app:8000
+	}
+	handle /reviews* {
+		reverse_proxy app:8000
+	}
+	handle /static* {
+		reverse_proxy app:8000
+	}
+	handle /login* {
+		reverse_proxy app:8000
+	}
+	handle /healthz {
+		reverse_proxy app:8000
+	}
+	handle /readyz {
+		reverse_proxy app:8000
+	}
+
+	# --- Статика лендинга (site/) ---
+	handle {
+		root * /srv/site
+		try_files {path} {path}.html {path}/index.html /index.html
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}

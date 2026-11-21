@@ -63,12 +63,12 @@ def test_magic_link_uses_public_base_url_and_sends(monkeypatch) -> None:
         return "smtp"
 
     monkeypatch.setattr("wb_web.core.mailer.send_magic_link", fake_send_magic_link)
-    monkeypatch.setattr(get_settings(), "public_base_url", "https://aimanager.kg")
+    monkeypatch.setattr(get_settings(), "public_base_url", "https://avto-otvetchik.com")
 
     client = TestClient(create_app())
     response = client.post("/auth/request", json={"email": "abs@example.com"})
     assert response.status_code == 200
-    assert sent["link"].startswith("https://aimanager.kg/auth/link?token=")
+    assert sent["link"].startswith("https://avto-otvetchik.com/auth/link?token=")
     assert sent["to"] == "abs@example.com"
 
 

@@ -55,7 +55,7 @@ def test_login_page_renders() -> None:
     client = TestClient(create_app())
     response = client.get("/login")
     assert response.status_code == 200
-    assert "AImanager" in response.text
+    assert "Авто-Отвеччик" in response.text
 
 
 def test_root_redirects_to_login_or_app() -> None:

@@ -6,7 +6,7 @@ import pyotp
 
 from wb_web.core.security import SecretEncryptor
 
-ISSUER = "AImanager"
+ISSUER = "Avto-Otvetchik"
 
 
 def new_secret() -> str:
