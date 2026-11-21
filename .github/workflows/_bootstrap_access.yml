@@ -1,14 +1,15 @@
-# ВРЕМЕННЫЙ workflow: выдать локальной машине SSH-доступ к VPS.
-# Удалить сразу после успешного входа. Работает только вручную.
+# ВРЕМЕННЫЙ workflow: найти VPS, куда пускает SSH_KEY_VPS (только чтение).
+# Удалить сразу после получения доступа. Работает только вручную.
 name: Bootstrap VPS access (temp)
 
 on:
   workflow_dispatch:
     inputs:
-      pubkey:
-        description: 'Публичный ключ, который добавить в authorized_keys на VPS'
-        required: true
+      ips:
+        description: 'IP через пробел (по умолчанию все известные)'
+        required: false
         type: string
+        default: '178.219.159.134 178.219.159.34 176.126.166.223 176.126.165.65'
 
 concurrency:
   group: bootstrap-vps-access
@@ -19,57 +20,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      SSH_HOST: ${{ secrets.SSH_HOST_VPS }}
       SSH_USER: ${{ secrets.SSH_USER_VPS }}
       SSH_PORT: ${{ secrets.SSH_PORT_VPS }}
       SSH_KEY: ${{ secrets.SSH_KEY_VPS }}
-      PUBKEY: ${{ inputs.pubkey }}
+      IPS: ${{ inputs.ips }}
 
     steps:
-      - name: Validate inputs
+      - name: Discover reachable VPS
         run: |
-          [ -n "$SSH_HOST" ] || { echo "::error::SSH_HOST_VPS не задан"; exit 1; }
-          [ -n "$SSH_USER" ] || { echo "::error::SSH_USER_VPS не задан"; exit 1; }
-          [ -n "$SSH_KEY" ]  || { echo "::error::SSH_KEY_VPS не задан"; exit 1; }
-          [ -n "$PUBKEY" ]   || { echo "::error::pubkey пустой"; exit 1; }
-          case "$PUBKEY" in
-            ssh-*|ecdsa-*) ;;
-            *) echo "::error::pubkey не похож на SSH-ключ"; exit 1 ;;
-          esac
-          printf 'host=%s user=%s port=%s pubkey=%s\n' \
-            "$SSH_HOST" "$SSH_USER" "${SSH_PORT:-22}" \
-            "$(printf '%s' "$PUBKEY" | awk '{print $1" "$3}')"
-
-      - name: Add local pubkey to VPS
-        run: |
-          set -e
+          set -u
+          [ -n "$SSH_KEY" ] || { echo "::error::SSH_KEY_VPS не задан"; exit 1; }
           PORT="${SSH_PORT:-22}"
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/vps_key && chmod 600 ~/.ssh/vps_key
-          printf '%s\n' "$PUBKEY" > /tmp/avto-local-pubkey
-
-          scp -i ~/.ssh/vps_key -o StrictHostKeyChecking=accept-new \
-            -P "$PORT" /tmp/avto-local-pubkey \
-            "$SSH_USER@$SSH_HOST:/tmp/avto-local-pubkey"
-
-          ssh -i ~/.ssh/vps_key -o StrictHostKeyChecking=accept-new \
-            -p "$PORT" "$SSH_USER@$SSH_HOST" bash -s <<'REMOTE'
-          set -e
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
-          if grep -qF -f /tmp/avto-local-pubkey ~/.ssh/authorized_keys 2>/dev/null; then
-            echo "KEY_ALREADY_PRESENT"
-          else
-            cat /tmp/avto-local-pubkey >> ~/.ssh/authorized_keys
-            echo "KEY_ADDED"
-          fi
-          rm -f /tmp/avto-local-pubkey
-          echo "ACCESS_OK"
-          echo "host: $(hostname)"
-          echo "user: $(whoami)"
-          echo "os:   $(. /etc/os-release && echo $PRETTY_NAME)"
-          echo "keys: $(wc -l < ~/.ssh/authorized_keys)"
-          echo -n "docker: "; command -v docker || echo NO_DOCKER
-          echo -n "deploy-key: "
-          grep -cF 'github-actions-avto-otvetchik' ~/.ssh/authorized_keys || true
-          REMOTE
+          for ip in $IPS; do
+            echo "======== $ip ========"
+            ssh -i ~/.ssh/vps_key -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+              -o ConnectTimeout=8 -p "$PORT" "$SSH_USER@$ip" \
+              'echo CI_AUTH_OK; hostname; whoami; . /etc/os-release && echo $PRETTY_NAME; echo "--- authorized_keys ---"; cat /root/.ssh/authorized_keys 2>/dev/null || echo "<нет>"; echo "--- docker ---"; command -v docker || echo NO_DOCKER' 2>&1 \
+              || echo "CI_AUTH_FAIL"
+          done
