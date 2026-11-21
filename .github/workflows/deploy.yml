@@ -1,18 +1,36 @@
 name: Deploy VPS
 
-# Прод-деплой на VPS вручную (workflow_dispatch) или по тегу v*.
-# Все секреты — в GitHub repo secrets, в репозитории их нет.
-# Первый запуск создаст /opt/avto-otvetchik и .env на сервере.
+# Автодеплой: каждый push в main (после зелёных тестов) подтягивает код на VPS
+# и пересобирает контейнеры. Также можно запустить вручную (workflow_dispatch)
+# или по тегу v*. Пока не заданы SSH_HOST_VPS/SSH_USER_VPS — деплой пропускается.
 
 on:
-  workflow_dispatch:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
 
 jobs:
+  test:
+    name: tests before deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check src tests
+      - run: python -m pytest -q
+
   deploy:
     name: deploy over SSH
+    needs: test
     runs-on: ubuntu-latest
     env:
       SSH_HOST: ${{ secrets.SSH_HOST_VPS }}
@@ -37,15 +55,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check required secrets
+      - name: Check secrets
+        id: check
         run: |
-          [ -n "$SSH_HOST" ] || { echo "::error::SSH_HOST_VPS secret is not set"; exit 1; }
-          [ -n "$SSH_USER" ] || { echo "::error::SSH_USER_VPS secret is not set"; exit 1; }
-          [ -n "$FERNET_KEY" ] || { echo "::error::FERNET_KEY secret is not set"; exit 1; }
-          [ -n "$SESSION_SECRET" ] || { echo "::error::SESSION_SECRET secret is not set"; exit 1; }
-          [ -n "$POSTGRES_PASSWORD" ] || { echo "::error::POSTGRES_PASSWORD secret is not set"; exit 1; }
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::SSH_HOST_VPS / SSH_USER_VPS не заданы — деплой пропущен. Заполните secrets, чтобы включить автодеплой."
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          [ -n "$FERNET_KEY" ] || { echo "::error::FERNET_KEY not set"; exit 1; }
+          [ -n "$SESSION_SECRET" ] || { echo "::error::SESSION_SECRET not set"; exit 1; }
+          [ -n "$POSTGRES_PASSWORD" ] || { echo "::error::POSTGRES_PASSWORD not set"; exit 1; }
 
       - name: Build .env
+        if: steps.check.outputs.skip != 'true'
         run: |
           python3 - <<'PY'
           import os
@@ -73,6 +97,7 @@ jobs:
           PY
 
       - name: Deploy via SSH
+        if: steps.check.outputs.skip != 'true'
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_KEY_VPS }}" > ~/.ssh/vps_key
@@ -90,4 +115,6 @@ jobs:
           rm -f /tmp/avto-env
           git pull
           docker compose -f docker-compose.prod.yml up -d --build
+          docker compose -f docker-compose.prod.yml exec -T app python3 -c \
+            "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=10).read().decode())"
           REMOTE

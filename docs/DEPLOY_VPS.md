@@ -137,7 +137,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ### Авто-деплой из GitHub
 
-`.github/workflows/deploy.yml` деплоит по тегу `v*` или кнопкой «Run workflow». Воркфлоу сам клонирует репозиторий в `/opt/avto-otvetchik`, записывает `.env` из secrets и запускает Compose ( ручной `.env` из раздела 3 в этом случае не нужен ).
+`.github/workflows/deploy.yml` деплоится **автоматически при каждом push в `main`** (только после зелёных тестов), а также по тегу `v*` и кнопке «Run workflow». Воркфлоу сам клонирует репозиторий в `/opt/avto-otvetchik`, записывает `.env` из secrets, подтягивает код (`git pull`), пересобирает и перезапускает Compose, затем проверяет `/healthz`. Пока не заданы `SSH_HOST_VPS`/`SSH_USER_VPS`, деплой пропускается с предупреждением — CI остаётся зелёным. Ручной `.env` из раздела 3 в этом случае не нужен.
 
 Secrets репозитория (GitHub → Settings → Secrets and variables → Actions):
 
