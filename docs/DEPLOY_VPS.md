@@ -135,6 +135,15 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 Логи: `docker compose -f docker-compose.prod.yml logs -f app caddy`
 
+### Авто-деплой из GitHub (опционально)
+
+`.github/workflows/deploy.yml` деплоит по тегу `v*` или кнопкой «Run workflow». Нужны secrets репозитория (GitHub → Settings → Secrets and variables → Actions):
+
+- `SSH_HOST_VPS` — IP VPS
+- `SSH_USER_VPS` — пользователь SSH
+- `SSH_KEY_VPS` — приватный ключ целиком (включая завершающий перевод строки)
+- `SSH_PORT_VPS` — порт (обычно 22)
+
 ## 6. Проверка
 
 ```bash

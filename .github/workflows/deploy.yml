@@ -1,0 +1,28 @@
+name: Deploy VPS
+
+# Прод-деплой на VPS вручную (workflow_dispatch) или по тегу v*.
+# Секреты — из GitHub repo secrets, в файле их нет.
+# Первый деплой — вручную по VPS (см. docs/DEPLOY_VPS.md), дальше — этот воркфлоу.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    name: deploy over SSH
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY_VPS }}" > ~/.ssh/vps_key
+          chmod 600 ~/.ssh/vps_key
+          ssh -i ~/.ssh/vps_key -o StrictHostKeyChecking=accept-new \
+            -p "${{ secrets.SSH_PORT_VPS }}" \
+            "${{ secrets.SSH_USER_VPS }}@${{ secrets.SSH_HOST_VPS }}" \
+            "cd /opt/avto-otvetchik && git pull && docker compose -f docker-compose.prod.yml up -d --build"
