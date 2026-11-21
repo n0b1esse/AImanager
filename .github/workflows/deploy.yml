@@ -120,7 +120,18 @@ jobs:
           install -m 600 /tmp/avto-env .env
           rm -f /tmp/avto-env
           git pull
+          # Миграции до старта воркера (иначе он падает на отсутствующих таблицах)
+          docker compose -f docker-compose.prod.yml run --rm app alembic upgrade head
           docker compose -f docker-compose.prod.yml up -d --build
-          docker compose -f docker-compose.prod.yml exec -T app python3 -c \
-            "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=10).read().decode())"
+          # app при старте тоже гоняет alembic — ждём, пока uvicorn реально поднимется
+          ok=0
+          for i in $(seq 1 30); do
+            if docker compose -f docker-compose.prod.yml exec -T app python3 -c \
+              "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5).read().decode())" 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          [ "$ok" -eq 1 ] || { echo "::error::healthz недоступен после 60s"; exit 1; }
           REMOTE
