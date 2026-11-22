@@ -52,9 +52,6 @@ asyncio_default_fixture_loop_scope = "function"
 target-version = "py312"
 line-length = 100
 
-[tool.vercel]
-entrypoint = "wb_web.main:app"
-
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 ignore = ["E501"]

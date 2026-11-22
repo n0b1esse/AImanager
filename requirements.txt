@@ -1,4 +1,4 @@
-# Runtime dependencies for deploy targets (Vercel, plain pip installs).
+# Runtime dependencies (plain pip installs; production runs from Dockerfile).
 # Local development should use: pip install -e ".[dev]"
 .
 aiosmtplib==4.0.2
