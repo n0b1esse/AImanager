@@ -3,32 +3,10 @@
 {% block content %}
 <p class="muted"><a href="/app/shops">← Магазины</a></p>
 <h1>Настройки ИИ · {{ shop.name }}</h1>
-<p class="muted small">Ключ хранится зашифрованным и никогда не показывается. Вопросы о сомовой/тенговой цене лимитов уточняем при продлении.</p>
+<p class="muted small">Модель и ключ подключены сервисом — вам ничего настраивать не нужно. Здесь можно задать голос магазина, стиль и лимиты.</p>
 
 <div class="panel">
   <form method="post" action="/app/shops/{{ shop.id }}/ai">
-    <div class="grid cols-2">
-      <div>
-        <label for="ai_provider">Провайдер</label>
-        <select id="ai_provider" name="ai_provider">
-          {% for value, label in [("openai", "OpenAI (Responses API)"), ("openai_compatible", "OpenAI-compatible (свой endpoint)"), ("ollama", "Ollama (локально/свой сервер)")] %}
-          <option value="{{ value }}" {% if shop.ai_provider == value %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div>
-        <label for="ai_model">Модель</label>
-        <input type="text" id="ai_model" name="model" value="{{ shop.ai_model }}" placeholder="gpt-4.1-mini / gemma3:4b / …" maxlength="120">
-      </div>
-    </div>
-
-    <label for="ai_base_url">Base URL <span class="muted">(для OpenAI-compatible / Ollama; для OpenAI можно пусто)</span></label>
-    <input type="text" id="ai_base_url" name="base_url" value="{{ shop.ai_base_url or '' }}" placeholder="https://api.provider.com/v1 · http://127.0.0.1:11434" maxlength="300">
-
-    <label for="ai_api_key">API-ключ {% if shop.ai_api_key_encrypted %}<span class="badge">сохранён: {{ api_key_masked }}</span>{% endif %}</label>
-    <input type="password" id="ai_api_key" name="api_key" autocomplete="new-password" placeholder="{% if shop.ai_api_key_encrypted %}Новый ключ (заменить) или пусто — оставить{% else %}sk-…{% endif %}">
-    <p class="muted small">Для Ollama ключ не нужен.</p>
-
     <label for="ai_instructions">Голос магазина / доп. правила <span class="muted">(необязательно)</span></label>
     <textarea id="ai_instructions" name="instructions" rows="3" maxlength="4000" placeholder="Бренд «ТестПром», обращаемся на «вы», никаких обещаний вне правил…">{{ shop.ai_instructions or '' }}</textarea>
 

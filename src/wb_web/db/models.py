@@ -179,3 +179,21 @@ class AdminUser(Base):
     totp_secret_encrypted: Mapped[str] = mapped_column(Text, default="")
     totp_enabled: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, server_default=func.now())
+
+
+class LLMProvider(Base):
+    """Server-side LLM endpoint configured by owners; invisible to customers.
+
+    Models are tried in order (fallback). API key is Fernet-encrypted.
+    """
+
+    __tablename__ = "llm_providers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    label: Mapped[str] = mapped_column(String(80))
+    base_url: Mapped[str] = mapped_column(String(300))
+    api_key_encrypted: Mapped[str] = mapped_column(Text, default="")
+    models: Mapped[list[str]] = mapped_column(JSON, default=list)
+    priority: Mapped[int] = mapped_column(Integer, default=0)
+    enabled: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, server_default=func.now())

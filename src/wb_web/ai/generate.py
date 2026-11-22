@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from wb_web.ai.engine import AIEngine, QualityGateError
+from wb_web.ai.managed import build_managed_provider
 from wb_web.ai.models import AIProfile, GenerationResult, ReviewContext
 from wb_web.ai.providers import (
     AIProviderError,
@@ -66,6 +67,8 @@ def build_provider_for_shop(shop: Shop, *, client: Any = None) -> BaseAIProvider
         if not model:
             raise AINotConfigured("ai_model is required for Ollama (e.g. gemma3:4b)")
         return OllamaProvider(model=model, base_url=shop.ai_base_url or "http://127.0.0.1:11434", client=client)
+    if provider == "managed":
+        raise AINotConfigured("managed LLM requires a session; call generate_for_review")
     raise AINotConfigured(f"unknown ai_provider: {provider}")
 
 
@@ -140,7 +143,11 @@ async def generate_for_review(
 
     recent = await _recent_answers(session, shop.id)
     context, profile = build_context_and_profile(shop, review, recent)
-    provider = provider or build_provider_for_shop(shop, client=client)
+    if provider is None:
+        if (shop.ai_provider or "").strip().lower() == "managed":
+            provider = await build_managed_provider(session, client=client)
+        else:
+            provider = build_provider_for_shop(shop, client=client)
     engine = AIEngine(provider)
 
     try:

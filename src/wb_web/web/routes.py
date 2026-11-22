@@ -42,7 +42,7 @@ from wb_web.core.events import track
 from wb_web.core.security import SecretEncryptor, mask_secret
 from wb_web.core.session import SESSION_COOKIE, SESSION_TTL_SECONDS, sign_session
 from wb_web.db.base import get_session
-from wb_web.db.models import AdminAuditLog, Review, Shop, Subscription, User
+from wb_web.db.models import AdminAuditLog, LLMProvider, Review, Shop, Subscription, User
 from wb_web.niches import load_packs
 from wb_web.queue import publish_review
 from wb_web.stats import admin_sales, client_stats
@@ -157,6 +157,15 @@ async def _admin_guard(request: Request, session: AsyncSession):
     if not admin_2fa_cookie_valid(request, admin):
         raise WebRedirect("/app/admin/2fa")
     return user, admin
+
+
+def _mask_llm_key(encrypted: str) -> str:
+    if not encrypted:
+        return "—"
+    try:
+        return mask_secret(SecretEncryptor.from_settings().decrypt(encrypted))
+    except Exception:  # noqa: BLE001 — never leak key material to the page
+        return "сохранён"
 
 
 # ---------- public ----------
@@ -414,10 +423,6 @@ async def shop_ai_save(
     request: Request,
     session: SessionDep,
     shop_id: int,
-    ai_provider: Annotated[str, Form()] = "openai",
-    model: Annotated[str, Form()] = "",
-    base_url: Annotated[str, Form()] = "",
-    api_key: Annotated[str, Form()] = "",
     instructions: Annotated[str, Form()] = "",
     style: Annotated[str, Form()] = "friendly",
     response_length: Annotated[str, Form()] = "short",
@@ -433,12 +438,7 @@ async def shop_ai_save(
     if shop is None:
         return _with_msg("/app/shops", "Магазин не найден", "err")
 
-    shop.ai_provider = ai_provider if ai_provider in {"openai", "openai_compatible", "ollama"} else "openai"
-    shop.ai_model = model.strip()
-    shop.ai_base_url = base_url.strip() or None
-    key = api_key.strip()
-    if key:
-        shop.ai_api_key_encrypted = SecretEncryptor.from_settings().encrypt(key)
+    # Provider/model/key are owned by admins — client cannot change them here.
     shop.ai_instructions = instructions.strip() or None
     shop.ai_style = style
     shop.ai_response_length = response_length
@@ -765,15 +765,145 @@ async def admin_page(request: Request, session: SessionDep):
     admin = await get_or_create_admin_user(session, user.email)
     if admin is not None:
         ctx["admin_role"] = admin.role
+    llm_rows = (
+        await session.execute(select(LLMProvider).order_by(LLMProvider.priority, LLMProvider.id))
+    ).scalars().all()
+    llm_providers = [
+        {
+            "id": p.id,
+            "label": p.label,
+            "base_url": p.base_url,
+            "models": ", ".join(p.models),
+            "priority": p.priority,
+            "enabled": p.enabled,
+            "key_masked": _mask_llm_key(p.api_key_encrypted),
+        }
+        for p in llm_rows
+    ]
     ctx.update(
         {
             "summary": {"users_total": users_total, "shops_total": shops_total, "plans": plan_counts},
             "rows": rows,
             "audit_entries": audit_entries,
             "sales": sales,
+            "llm_providers": llm_providers,
         }
     )
     return templates.TemplateResponse(request, "admin.html", ctx)
+
+
+@router.post("/app/admin/llm/add")
+async def admin_llm_add(
+    request: Request,
+    session: SessionDep,
+    label: Annotated[str, Form()] = "",
+    base_url: Annotated[str, Form()] = "",
+    api_key: Annotated[str, Form()] = "",
+    models: Annotated[str, Form()] = "",
+    priority: Annotated[int, Form()] = 0,
+):
+    user, admin = await _admin_guard(request, session)
+    if admin.role != "owner":
+        return _with_msg("/app/admin", "Роль support: доступ только для просмотра", "err")
+    label, base_url = label.strip(), base_url.strip()
+    model_list = [m.strip() for m in models.split(",") if m.strip()]
+    if not label or not base_url.startswith(("http://", "https://")) or not model_list:
+        return _with_msg("/app/admin", "Укажите название, URL (http/https) и хотя бы одну модель", "err")
+    row = LLMProvider(
+        label=label[:80],
+        base_url=base_url[:300],
+        api_key_encrypted=SecretEncryptor.from_settings().encrypt(api_key) if api_key else "",
+        models=model_list,
+        priority=priority,
+        enabled=True,
+    )
+    session.add(row)
+    await record_admin_action(
+        session,
+        actor_id=user.id,
+        action="llm_provider.add",
+        target=label[:80],
+        detail={"base_url": base_url[:120], "models": model_list, "api_key": "provided" if api_key else "empty"},
+        ip=request.client.host if request.client else None,
+    )
+    return _with_msg("/app/admin", f"Провайдер «{label}» добавлен")
+
+
+@router.post("/app/admin/llm/{provider_id}/toggle")
+async def admin_llm_toggle(request: Request, session: SessionDep, provider_id: int):
+    user, admin = await _admin_guard(request, session)
+    if admin.role != "owner":
+        return _with_msg("/app/admin", "Роль support: доступ только для просмотра", "err")
+    row = (await session.execute(select(LLMProvider).where(LLMProvider.id == provider_id))).scalar_one_or_none()
+    if row is None:
+        return _with_msg("/app/admin", "Провайдер не найден", "err")
+    row.enabled = not row.enabled
+    await record_admin_action(
+        session,
+        actor_id=user.id,
+        action="llm_provider.toggle",
+        target=row.label[:80],
+        detail={"enabled": row.enabled},
+        ip=request.client.host if request.client else None,
+    )
+    return _with_msg("/app/admin", f"«{row.label}»: {'включён' if row.enabled else 'выключен'}")
+
+
+@router.post("/app/admin/llm/{provider_id}/delete")
+async def admin_llm_delete(request: Request, session: SessionDep, provider_id: int):
+    user, admin = await _admin_guard(request, session)
+    if admin.role != "owner":
+        return _with_msg("/app/admin", "Роль support: доступ только для просмотра", "err")
+    row = (await session.execute(select(LLMProvider).where(LLMProvider.id == provider_id))).scalar_one_or_none()
+    if row is None:
+        return _with_msg("/app/admin", "Провайдер не найден", "err")
+    label = row.label
+    await session.delete(row)
+    await record_admin_action(
+        session,
+        actor_id=user.id,
+        action="llm_provider.delete",
+        target=label[:80],
+        ip=request.client.host if request.client else None,
+    )
+    return _with_msg("/app/admin", f"«{label}» удалён")
+
+
+@router.post("/app/admin/llm/{provider_id}/edit")
+async def admin_llm_edit(
+    request: Request,
+    session: SessionDep,
+    provider_id: int,
+    label: Annotated[str, Form()] = "",
+    base_url: Annotated[str, Form()] = "",
+    api_key: Annotated[str, Form()] = "",
+    models: Annotated[str, Form()] = "",
+    priority: Annotated[int, Form()] = 0,
+):
+    user, admin = await _admin_guard(request, session)
+    if admin.role != "owner":
+        return _with_msg("/app/admin", "Роль support: доступ только для просмотра", "err")
+    row = (await session.execute(select(LLMProvider).where(LLMProvider.id == provider_id))).scalar_one_or_none()
+    if row is None:
+        return _with_msg("/app/admin", "Провайдер не найден", "err")
+    model_list = [m.strip() for m in models.split(",") if m.strip()]
+    if not label.strip() or not base_url.startswith(("http://", "https://")) or not model_list:
+        return _with_msg("/app/admin", "Укажите название, URL и модели", "err")
+    row.label = label.strip()[:80]
+    row.base_url = base_url.strip()[:300]
+    row.models = model_list
+    row.priority = priority
+    if api_key:
+        row.api_key_encrypted = SecretEncryptor.from_settings().encrypt(api_key)
+    await record_admin_action(
+        session,
+        actor_id=user.id,
+        action="llm_provider.edit",
+        target=row.label[:80],
+        detail={"base_url": row.base_url[:120], "models": model_list, "api_key": "updated" if api_key else "kept"},
+        ip=request.client.host if request.client else None,
+    )
+    return _with_msg("/app/admin", f"«{row.label}» обновлён")
 
 
 @router.post("/app/admin/users/{user_id}/activate")
